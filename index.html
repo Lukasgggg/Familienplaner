@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Familien- & Projekt-Zentrum v1.45</title>
+    <title>Familien- & Projekt-Zentrum v1.46</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
@@ -104,7 +104,7 @@
 
         /* --- SCHREIB TOOL LAYOUT --- */
         .editor-container { display: flex; gap: 15px; flex: 1; height: 100%; overflow: hidden; }
-        .editor-sidebar { width: 130px; border-right: 1px solid rgba(0,0,0,0.1); padding-right: 10px; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; }
+        .editor-sidebar { width: 140px; border-right: 1px solid rgba(0,0,0,0.1); padding-right: 10px; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; }
         .editor-main { flex: 1; display: flex; flex-direction: column; gap: 10px; }
         .editor-textarea { flex: 1; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; background: var(--bg-color); color: var(--text-color); resize: none; font-size: 0.95rem; line-height: 1.4; outline: none; }
         .doc-tab { padding: 8px; font-size: 0.8rem; background: rgba(0,0,0,0.03); border: none; border-radius: 6px; cursor: pointer; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-color); font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
@@ -149,7 +149,7 @@
                     <p class="date-display">Lade...</p>
                 </div>
                 <div class="back" onclick="event.stopPropagation()">
-                    <h2>System Version 1.45</h2>
+                    <h2>System Version 1.46</h2>
                     <button class="btn-main active" style="margin-top:10px;" onclick="openSettings()">⚙️ Einstellungen & Profile</button>
                 </div>
             </div>
@@ -269,15 +269,13 @@
 
 <script>
     let GEHEIMER_PIN = "1234";
-    let activeMember = "Lukas";
+    let activeMember = "";
     let config = { view: 'normal', gradient: 'linear-gradient(135deg, #8e44ad, #3498db, #2ecc71)', darkMode: false };
     
-    let familyData = {
-        Lukas: { features: { todo: true, topics: true, cal: false, project: true, ideas: true, editor: true }, todos: [], topics: [], projects: [], ideas: [], events: [], docs: [{title: 'Mein Erstes Dokument', text: 'Hier kannst du ganze Geschichten oder Skripte schreiben...'}] }
-    };
+    let familyData = {};
     let collapsedCards = {};
     let monthOffset = 0;
-    let activeDocIndex = 0; // Welches Dokument im Editor offen ist
+    let activeDocIndex = 0;
 
     const firebaseConfig = {
         apiKey: "AIzaSyAxam2TnWekNHYsKGfVfYoFEz2Jo-QZjEs",
@@ -303,8 +301,25 @@
         database.ref('familyZentrumConfig/pin').on('value', (s) => { if(s.val()) GEHEIMER_PIN = s.val().toString(); });
         database.ref('dynamicFamilyData').on('value', (snapshot) => {
             const data = snapshot.val();
-            if (data) { familyData = data; }
-            if (!familyData[activeMember]) { activeMember = Object.keys(familyData)[0] || "Lukas"; }
+            if (data) { 
+                familyData = data; 
+            } else {
+                // Fallback, wenn die DB komplett leer ist
+                familyData = {
+                    Lukas: { features: { todo: true, topics: true, cal: false, project: true, ideas: true, editor: true }, todos: [], topics: [], projects: [], ideas: [], events: [], docs: [{title: 'Notizen', text: ''}] }
+                };
+            }
+            
+            // --- HIER IST DER RETTENDE SICHERHEITS-CHECK ---
+            // Wir prüfen bei JEDER Person, ob die neuen Feature-Strukturen existieren, damit es nicht abstürzt
+            Object.keys(familyData).forEach(name => {
+                if(!familyData[name].features) familyData[name].features = { todo: true, topics: true };
+                if(!familyData[name].docs) familyData[name].docs = [{title: 'Notizen', text: ''}];
+            });
+
+            if (!activeMember || !familyData[activeMember]) { 
+                activeMember = Object.keys(familyData)[0] || "Lukas"; 
+            }
             renderAll();
         });
         updateClock(); setInterval(updateClock, 1000); applyGradient();
@@ -350,7 +365,7 @@
     }
 
     function renderDeleteProfilesList() {
-        const div = document.getElementById('delete-profiles-list'); div.innerHTML = "";
+        const div = document.getElementById('delete-profiles-list'); if(!div) return; div.innerHTML = "";
         Object.keys(familyData).forEach(name => {
             div.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>${name}</span><button class="btn-delete" onclick="deleteMember('${name}')">🗑️</button></div>`;
         });
@@ -363,7 +378,7 @@
         const isBeta = config.view === 'beta';
         const grid = document.getElementById(isBeta ? 'dashboard-beta' : 'dashboard-normal');
         const dock = document.getElementById(isBeta ? 'dock-beta' : 'dock-normal');
-        grid.innerHTML = ""; dock.innerHTML = "";
+        if(!grid) return; grid.innerHTML = ""; dock.innerHTML = "";
 
         ["person-nav-normal", "person-nav-beta"].forEach(id => {
             const cont = document.getElementById(id); if(!cont) return; cont.innerHTML = "";
@@ -398,7 +413,7 @@
 
             const card = document.createElement('div');
             card.className = "card"; card.setAttribute('draggable', 'true'); card.setAttribute('data-id', c.id);
-            if(c.id === 'editor') card.style.height = "520px"; // Dem Editor etwas mehr Platz geben
+            if(c.id === 'editor') card.style.height = "520px";
             
             let html = `
                 <div class="card-header"><span>☰ ${c.title}</span><button class="btn-mini" onclick="collapsedCards('${cardKey}')">➖</button></div>
@@ -439,7 +454,6 @@
 
     function collapsedCards(key) { collapsedCards[key] = true; renderAll(); }
 
-    // --- DRAG & DROP ---
     function setupDragAndDrop(grid) {
         const cards = grid.querySelectorAll('.card');
         let placeholder = document.createElement('div'); placeholder.className = 'card-placeholder';
@@ -463,11 +477,8 @@
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
-    // --- TEXT-EDITOR LOGIK ---
     function renderEditorWorkspace() {
         const person = familyData[activeMember];
-        if(!person.docs) person.docs = [{title: 'Unbenanntes Dokument', text: ''}];
-        
         const sidebar = document.getElementById('editor-docs-list');
         const textarea = document.getElementById('editor-field');
         if(!sidebar || !textarea) return;
@@ -481,7 +492,6 @@
             sidebar.appendChild(btn);
         });
 
-        // Textfeld mit Inhalt befüllen
         if(person.docs[activeDocIndex]) {
             textarea.value = person.docs[activeDocIndex].text || "";
             textarea.disabled = false;
@@ -492,21 +502,16 @@
     }
 
     function addDocument() {
-        const inp = document.getElementById('new-doc-title');
-        const title = inp.value.trim();
-        if(!title) return;
+        const inp = document.getElementById('new-doc-title'); const title = inp.value.trim(); if(!title) return;
         const person = familyData[activeMember];
-        if(!person.docs) person.docs = [];
         person.docs.push({title: title, text: ''});
-        activeDocIndex = person.docs.length - 1;
-        inp.value = "";
-        syncData();
+        activeDocIndex = person.docs.length - 1; inp.value = ""; syncData();
     }
 
     function deleteDocument(idx) {
         if(confirm("Dieses Dokument unwiderruflich löschen?")) {
             familyData[activeMember].docs.splice(idx, 1);
-            activeDocIndex = 0;
+            activeDocIndex = 0; if(familyData[activeMember].docs.length === 0) familyData[activeMember].docs = [{title: 'Notizen', text: ''}];
             syncData();
         }
     }
@@ -514,18 +519,11 @@
     function autoSaveText() {
         const textarea = document.getElementById('editor-field');
         if(!textarea || !familyData[activeMember].docs[activeDocIndex]) return;
-        
-        // Text im lokalen Array aktualisieren
         familyData[activeMember].docs[activeDocIndex].text = textarea.value;
-        
-        // Cloud-Sync verzögern, um die Datenbank bei schnellem Tippen nicht zu überlasten (Debounce)
         if(window.saveTimeout) clearTimeout(window.saveTimeout);
-        window.saveTimeout = setTimeout(() => {
-            syncData();
-        }, 1000); // Speichert 1 Sekunde nach dem letzten Tastendruck ab
+        window.saveTimeout = setTimeout(() => { syncData(); }, 1000);
     }
 
-    // --- REFUGE FROM PREVIOUS FEATURES ---
     function populateList(type) {
         const ul = document.getElementById(`list-${type}`); if(!ul) return;
         const person = familyData[activeMember];
