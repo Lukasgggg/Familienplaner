@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Familien- & Projekt-Zentrum v1.47</title>
+    <title>Familien-Zentrum v1.31</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
@@ -27,18 +27,37 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; transition: background 0.2s, color 0.2s, width 0.3s; }
         body { background-color: var(--bg-color); color: var(--text-color); min-height: 100vh; overflow-x: hidden; }
 
+        /* --- QUICK VERSION TOGGLE (OBEN RECHTS) --- */
         .quick-version-toggle {
-            position: fixed; top: 15px; right: 15px; z-index: 4500;
-            background: var(--header-gradient); color: white; border: 2px solid var(--card-bg);
-            padding: 8px 16px; border-radius: 30px; font-weight: bold; font-size: 0.9rem; cursor: pointer;
-            box-shadow: var(--shadow); display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 4500;
+            background: var(--header-gradient);
+            color: white;
+            border: 2px solid var(--card-bg);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .quick-version-toggle:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+        .quick-version-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
 
+        /* --- LOGIN --- */
         .login-overlay { position: fixed; inset: 0; background: var(--bg-color); display: flex; justify-content: center; align-items: center; z-index: 5000; }
-        .login-box { background: var(--card-bg); padding: 30px; border-radius: 24px; box-shadow: var(--shadow); text-align: center; width: 90%; max-width: 450px; }
-        .login-box input[type="password"], .login-box input[type="text"] { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 2px solid #ddd; font-size: 1.1rem; background: var(--card-bg); color: var(--text-color); outline: none; }
+        .login-box { background: var(--card-bg); padding: 40px; border-radius: 24px; box-shadow: var(--shadow); text-align: center; width: 90%; max-width: 400px; }
+        .login-box input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 2px solid #ddd; font-size: 1.3rem; text-align: center; outline: none; background: var(--card-bg); color: var(--text-color); }
 
+        /* --- 3D FLIP HEADER --- */
         .flip-container { perspective: 1500px; width: 100%; max-width: 1200px; margin: 20px auto; cursor: pointer; height: 140px; }
         .flipper { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.6s; }
         .flip-container.flipped .flipper { transform: rotateY(180deg); }
@@ -46,83 +65,147 @@
         .back { transform: rotateY(180deg); background: #2c3e50; }
         @keyframes gradShift { 0% {background-position: 0% 50%} 50% {background-position: 100% 50%} 100% {background-position: 0% 50%} }
 
-        .glow-text-clock { font-size: 2.2rem; font-weight: 800; background: var(--header-gradient); background-size: 300% 300%; animation: gradShift 6s ease infinite; -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; }
+        /* --- SCHRIFT-UHR --- */
+        .glow-text-clock {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: var(--header-gradient);
+            background-size: 300% 300%;
+            animation: gradShift 6s ease infinite;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            margin-bottom: 2px;
+        }
 
+        /* --- BUTTONS --- */
         .btn-main { padding: 12px 20px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; background: #e0e0e0; color: #333; font-size: 1rem; }
         .btn-main.active { background-color: var(--primary-color); color: white; }
         .dark-mode .btn-main { background: #333; color: #e0e0e0; }
         .dark-mode .btn-main.active { background-color: var(--primary-color); color: white; }
-        .btn-skip-mini { padding: 4px 10px; font-size: 0.8rem; border-radius: 6px; border: none; background: rgba(0,0,0,0.08); color: var(--text-color); cursor: pointer; }
+        .btn-skip-mini { padding: 4px 10px; font-size: 0.8rem; border-radius: 6px; border: none; background: rgba(0,0,0,0.08); color: var(--text-color); cursor: pointer; font-weight: bold; }
+        .dark-mode .btn-skip-mini { background: rgba(255,255,255,0.1); }
 
+        /* --- LAYOUTS --- */
         .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 25px; width: 100%; min-height: 200px; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; width: 100%; position: relative; transition: all 0.3s ease; }
 
-        .minimized-dock { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; width: 100%; }
+        .minimized-dock { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; width: 100%; min-height: 0px; }
 
         .beta-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; position: relative; }
-        .sidebar { width: 280px; background: var(--card-bg); border-right: 1px solid rgba(0,0,0,0.1); display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; overflow-x: hidden; transition: width 0.3s; }
+        .sidebar { width: 280px; background: var(--card-bg); border-right: 1px solid rgba(0,0,0,0.1); display: flex; flex-direction: column; padding: 20px; position: relative; box-shadow: var(--shadow); flex-shrink: 0; overflow-x: hidden; }
         .sidebar.collapsed { width: 0px; padding: 20px 0; border: none; }
         .sidebar .sidebar-content { display: flex; flex-direction: column; height: 100%; width: 240px; }
         .sidebar.collapsed .sidebar-content { display: none; }
         .main-view { flex: 1; overflow-y: auto; padding: 25px; width: 100%; }
         
-        .sidebar-toggle { position: absolute; top: 20px; right: 5px; background: var(--primary-color); color: white; border-radius: 50%; width: 35px; height: 35px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 110; border: 2px solid var(--card-bg); font-weight: bold; }
-
         @media (max-width: 768px) {
             .sidebar { position: absolute; left: 0; top: 0; bottom: 0; z-index: 100; }
             .sidebar.collapsed { width: 0px; }
-            .quick-version-toggle { top: auto; bottom: 15px; right: 15px; }
+            .main-view { padding: 15px; }
+            .quick-version-toggle { top: auto; bottom: 15px; right: 15px; } /* Auf Handys unten rechts, um nicht zu stören */
         }
 
-        /* --- CARDS --- */
+        /* --- CARDS MIT DRAG & RESIZE --- */
         .card { 
-            background: var(--card-bg); border-radius: 20px; box-shadow: var(--shadow); 
-            display: flex; flex-direction: column; border-top: 5px solid var(--primary-color); 
-            height: 480px; resize: both; overflow: auto; position: relative;
+            background: var(--card-bg); 
+            border-radius: 20px; 
+            box-shadow: var(--shadow); 
+            display: flex; 
+            flex-direction: column; 
+            margin-bottom: 20px; 
+            border-top: 5px solid var(--primary-color); 
+            height: 560px;
+            resize: both; 
+            overflow: auto; 
+            opacity: 1;
+            transform: scale(1);
+            transition: transform 0.2s ease, opacity 0.2s ease;
         }
+        
+        .card.dragging {
+            opacity: 0.4;
+            transform: scale(0.98);
+            border: 2px dashed var(--primary-color);
+        }
+
         .card-header { 
-            padding: 15px 20px; border-bottom: 1px solid rgba(0,0,0,0.05); 
-            display: flex; justify-content: space-between; align-items: center; 
-            cursor: grab; user-select: none; background: rgba(0,0,0,0.01);
+            padding: 15px 20px; 
+            border-bottom: 1px solid rgba(0,0,0,0.05); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            cursor: move; 
+            user-select: none;
         }
-        .card-header:active { cursor: grabbing; }
-        .card-body { padding: 15px; flex: 1; display: flex; flex-direction: column; overflow: auto; }
+        .card-body { padding: 20px; flex: 1; display: flex; flex-direction: column; overflow: auto; }
         .btn-mini { border: none; background: rgba(0,0,0,0.05); cursor: pointer; padding: 6px; border-radius: 6px; font-size: 0.8rem; color: var(--text-color); }
         
-        .card-placeholder { border: 2px dashed var(--primary-color); background: rgba(52, 152, 219, 0.05); border-radius: 20px; height: 480px; }
-        .card-mini-floating { background: var(--card-bg); color: var(--text-color); display: flex; align-items: center; gap: 12px; padding: 10px 20px; border-radius: 30px; font-weight: bold; cursor: pointer; box-shadow: var(--shadow); border-left: 4px solid var(--primary-color); }
+        .card-mini-floating { 
+            background: var(--card-bg); 
+            color: var(--text-color); 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 10px 20px; 
+            border-radius: 30px; 
+            font-size: 0.9rem; 
+            font-weight: bold; 
+            cursor: pointer; 
+            box-shadow: var(--shadow); 
+            border-left: 4px solid var(--primary-color);
+            animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .card-mini-floating:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .card-mini-floating b { background: rgba(0,0,0,0.05); width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.8rem; }
+        .dark-mode .card-mini-floating b { background: rgba(255,255,255,0.1); }
 
-        .input-group { display: flex; gap: 6px; margin-bottom: 12px; }
-        .input-group input, .input-group select { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; background: var(--card-bg); color: var(--text-color); }
-        .input-group button { background-color: var(--primary-color); color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        
+        @keyframes popIn {
+            from { transform: scale(0.6) translateY(-20px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        /* --- LISTS & INPUTS --- */
+        .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
+        .input-group input, .input-group select { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; background: var(--card-bg); color: var(--text-color); }
+        .input-group button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .list-container { overflow-y: auto; flex: 1; list-style: none; }
         .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: rgba(0,0,0,0.02); border-radius: 6px; margin-bottom: 8px; border-left: 4px solid var(--primary-color); }
-        .dark-mode .list-item { background-color: rgba(255,255,255,0.02); }
         .clickable-text { cursor: pointer; flex: 1; }
-        .btn-delete { background: none; border: none; color: #e74c3c; cursor: pointer; font-weight: bold; padding: 0 5px; }
+        .btn-delete { background: none; border: none; color: #e74c3c; cursor: pointer; padding: 2px 6px; font-weight: bold; }
 
-        /* --- SCHREIB TOOL LAYOUT --- */
-        .editor-container { display: flex; gap: 15px; flex: 1; height: 100%; overflow: hidden; }
-        .editor-sidebar { width: 140px; border-right: 1px solid rgba(0,0,0,0.1); padding-right: 10px; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; }
-        .editor-main { flex: 1; display: flex; flex-direction: column; gap: 10px; }
-        .editor-textarea { flex: 1; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; background: var(--bg-color); color: var(--text-color); resize: none; font-size: 0.95rem; line-height: 1.4; outline: none; }
-        .doc-tab { padding: 8px; font-size: 0.8rem; background: rgba(0,0,0,0.03); border: none; border-radius: 6px; cursor: pointer; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-color); font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
-        .doc-tab.active { background: var(--primary-color); color: white; }
-        .dark-mode .doc-tab { background: rgba(255,255,255,0.05); color: var(--text-color); }
-        .dark-mode .doc-tab.active { background: var(--primary-color); color: white; }
-
+        /* --- BIG CALENDAR --- */
         .big-calendar { background: var(--card-bg); border-radius: 24px; padding: 20px; box-shadow: var(--shadow); width: 100%; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 15px; }
-        .cal-cell { background: rgba(0,0,0,0.02); min-height: 95px; padding: 8px; cursor: pointer; border-radius: 8px; display: flex; flex-direction: column; gap: 4px; border: 1px solid rgba(0,0,0,0.03); }
+        .cal-cell { background: rgba(0,0,0,0.02); min-height: 95px; padding: 8px; cursor: pointer; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 4px; }
+        .cal-cell:hover { background: rgba(0,0,0,0.05); }
         .cal-cell.today { background: rgba(52, 152, 219, 0.15); border: 2px solid var(--primary-color); }
-        .cal-event { font-size: 0.75rem; padding: 2px 6px; color: white; border-radius: 4px; font-weight: bold; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+        .cal-num { font-weight: bold; font-size: 0.9rem; }
+        .cal-event { font-size: 0.75rem; padding: 2px 6px; color: white; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
 
-        .mobile-cal-list { display: none; flex-direction: column; gap: 10px; margin-top: 15px; }
-        @media (max-width: 768px) { .cal-grid { display: none !important; } .mobile-cal-list { display: flex !important; } .editor-container { flex-direction: column; } .editor-sidebar { width: 100%; border-right: none; max-height: 90px; flex-direction: row; } }
+        /* --- MOBILE CALENDAR --- */
+        .mobile-cal-list { display: none; flex-direction: column; gap: 10px; margin-top: 15px; max-height: 500px; overflow-y: auto; }
+        .mobile-cal-row { background: rgba(0,0,0,0.02); padding: 12px; border-radius: 12px; display: flex; flex-direction: column; gap: 6px; border-left: 5px solid transparent; cursor: pointer; }
+        .mobile-cal-row.today { background: rgba(52, 152, 219, 0.1); border-left-color: var(--primary-color); }
+        .mobile-cal-date-label { font-weight: bold; font-size: 0.95rem; display: flex; justify-content: space-between; }
+        .mobile-cal-events-container { display: flex; flex-direction: column; gap: 4px; }
+        .mobile-cal-pill { padding: 6px 10px; color: white; border-radius: 6px; font-size: 0.85rem; font-weight: bold; }
 
-        .features-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: left; margin: 10px 0; }
-        .features-grid label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; }
+        @media (max-width: 768px) {
+            .cal-grid { display: none !important; }
+            .mobile-cal-list { display: flex !important; }
+            .calendar-week-view { font-size: 0.75rem; gap: 2px !important; }
+            .day-number { width: 22px !important; height: 22px !important; font-size: 0.75rem !important; }
+        }
+
+        .settings-modal { width: 90% !important; max-width: 750px !important; max-height: 85vh; overflow-y: auto; display: block !important; text-align: left; }
+        .sidebar-toggle { position: absolute; top: 20px; right: 5px; background: var(--primary-color); color: white; border-radius: 50%; width: 35px; height: 35px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 110; border: 2px solid var(--card-bg); font-weight: bold; box-shadow: var(--shadow); }
+        
+        .week-navigation-container { background-color: rgba(0,0,0,0.03); border-radius: 8px; padding: 10px; margin-bottom: 15px; }
+        .calendar-week-view { display: grid; grid-template-columns: auto repeat(7, 1fr) auto; gap: 5px; text-align: center; align-items: center; }
+        .day-number { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; margin: auto; font-size: 0.85rem; }
+        .day-number.selected-day { border: 2px solid var(--text-color); }
+        .day-preview-box { background-color: #fff9e6; color: #333; border-left: 4px solid #f1c40f; padding: 8px 12px; border-radius: 4px; margin-bottom: 15px; font-size: 0.9rem; }
     </style>
 </head>
 <body id="app-body">
@@ -133,9 +216,11 @@
 
 <div class="login-overlay" id="login-screen">
     <div class="login-box">
-        <h2>🔒 Familien- & Projekt-Zentrum</h2>
+        <h2 style="margin-bottom:10px;">🔒 Familien-Zentrum</h2>
         <input type="password" id="pin-input" maxlength="4" placeholder="••••" onkeydown="if(event.key === 'Enter') checkPin()">
         <button class="btn-main active" style="width:100%" onclick="checkPin()">Einloggen</button>
+        <button id="biometric-btn" class="btn-main" style="width:100%; margin-top:10px; display:none; background:#2ecc71; color:white;" onclick="loginWithBiometrics()">🧬 Mit Face ID / Touch ID entsperren</button>
+        <p id="pin-error" style="color:#e74c3c; margin-top:10px; display:none; font-weight:bold;">Falscher PIN!</p>
     </div>
 </div>
 
@@ -146,20 +231,33 @@
             <div class="flipper">
                 <div class="front">
                     <h1 class="clock-display" style="font-size: 2.8rem;">00:00:00</h1>
-                    <p class="date-display">Lade...</p>
+                    <p class="date-display">Datum laden...</p>
                 </div>
                 <div class="back" onclick="event.stopPropagation()">
-                    <h2>System Version 1.47</h2>
-                    <button class="btn-main active" style="margin-top:10px;" onclick="openSettings()">⚙️ Einstellungen & Profile</button>
+                    <h2>System Version 1.1</h2>
+                    <button class="btn-main active" style="margin-top:10px;" onclick="openSettings()">⚙️ Einstellungen</button>
                 </div>
             </div>
         </div>
 
         <div class="family-nav" id="person-nav-normal" style="margin-bottom:25px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;"></div>
+        
         <div style="text-align:center; margin-bottom:20px;">
             <h2 id="current-title-normal">Dashboard</h2>
             <div class="minimized-dock" id="dock-normal"></div>
         </div>
+        
+        <div id="expanded-calendar-normal" class="big-calendar" style="display:none; margin-bottom:30px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <button class="btn-skip-mini" onclick="changeMonth(-1)">◀</button>
+                <h2 id="cal-month-name-normal">Monat</h2>
+                <button class="btn-skip-mini" onclick="changeMonth(1)">▶</button>
+                <button class="btn-main" onclick="toggleExpandCalendarNormal()">Collapse ↩</button>
+            </div>
+            <div class="cal-grid" id="cal-grid-body-normal"></div>
+            <div class="mobile-cal-list" id="cal-list-body-normal"></div>
+        </div>
+
         <div id="dashboard-normal" class="dashboard-grid"></div>
     </div>
 
@@ -173,17 +271,35 @@
                 <hr style="margin:15px 0; opacity:0.2;">
                 <button class="btn-main" onclick="toggleDarkMode()">🌓 Dark Mode</button>
                 <button class="btn-main" style="margin-top:10px;" onclick="openSettings()">⚙️ Einstellungen</button>
-                <div id="beta-clock-small" style="margin-top:auto; text-align:center; font-weight:bold;">00:00</div>
+                <div id="beta-clock-small" style="margin-top:auto; text-align:center; font-weight:bold; font-size:1.2rem;">00:00</div>
             </div>
         </div>
         
         <div class="main-view">
             <div style="text-align:center; margin-bottom:25px;">
                 <div class="glow-text-clock clock-display">00:00:00</div>
-                <div class="date-display" style="opacity:0.7; font-size:1rem; font-weight:600;">Lade...</div>
+                <div class="date-display" style="opacity:0.7; font-size:1rem; font-weight:600;">Datum...</div>
                 <h2 id="beta-title" style="font-size:2.2rem; margin-top:15px;">Dashboard</h2>
                 <div class="minimized-dock" id="dock-beta" style="margin-top:15px;"></div>
             </div>
+            
+            <div id="family-calendar-beta" class="big-calendar" style="display:none; margin-bottom:30px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <button class="btn-skip-mini" onclick="changeMonth(-1)">◀</button>
+                        <span id="cal-month-name" style="font-weight:bold; margin:0 10px; font-size:1.2rem;">Monat</span>
+                        <button class="btn-skip-mini" onclick="changeMonth(1)">▶</button>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                        <button id="btn-view-month" class="btn-main active" onclick="setBetaCalScope('month')">Monat</button>
+                        <button id="btn-view-week" class="btn-main" onclick="setBetaCalScope('week')">Woche</button>
+                        <button class="btn-main" style="padding:6px 12px; font-size:0.9rem;" onclick="jumpToToday()">Heute</button>
+                    </div>
+                </div>
+                <div class="cal-grid" id="cal-grid-body"></div>
+                <div class="mobile-cal-list" id="cal-list-body"></div>
+            </div>
+
             <div id="dashboard-beta" class="dashboard-grid"></div>
         </div>
     </div>
@@ -192,65 +308,58 @@
 <div id="event-modal" class="login-overlay" style="display:none; background:rgba(0,0,0,0.6); z-index:4000;">
     <div class="login-box" style="text-align:left; max-width:450px;">
         <h3>📅 Neuen Termin eintragen</h3>
-        <input type="text" id="quick-event-name" placeholder="Terminbeschreibung...">
-        <label>Farbe:</label>
+        <label>Datum:</label>
+        <input type="date" id="quick-event-date">
+        <input type="text" id="quick-event-name" placeholder="Name des Termins...">
+        <label>Farbe auswählen:</label>
         <select id="quick-event-color" class="btn-main" style="width:100%; margin-top:5px; background:var(--card-bg);">
-            <option value="#3498db">Blau</option>
-            <option value="#e67e22">Orange</option>
-            <option value="#2ecc71">Grün</option>
-            <option value="#e74c3c">Rot</option>
-            <option value="#9b59b6">Violett</option>
+            <option value="#3498db">Standard Blau</option>
+            <option value="#e67e22">Kürbis Orange</option>
+            <option value="#2ecc71">Smaragd Grün</option>
+            <option value="#e74c3c">Alarmsignal Rot</option>
+            <option value="#9b59b6">Amethyst Violett</option>
+            <option value="#1abc9c">Türkis See</option>
         </select>
-        <input type="hidden" id="quick-event-date">
         <div style="display:flex; gap:10px; margin-top:20px;">
-            <button class="btn-main active" style="flex:1;" onclick="saveQuickEvent()">Speichern</button>
-            <button class="btn-main" style="flex:1;" onclick="document.getElementById('event-modal').style.display='none'">Abbrechen</button>
+            <button class="btn-main active" style="flex:1;" onclick="saveQuickEvent()">Eintragen</button>
+            <button class="btn-main" style="flex:1;" onclick="closeEventModal()">Abbrechen</button>
         </div>
     </div>
 </div>
 
 <div id="settings-modal" class="login-overlay" style="display:none; background:rgba(0,0,0,0.6)">
-    <div class="login-box" style="width:90%; max-width:750px; max-height:85vh; overflow-y:auto; text-align:left;">
+    <div class="login-box settings-modal">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #eee; padding-bottom:10px;">
-            <h2>⚙️ App-Steuerung & Profile</h2>
-            <button class="btn-main" onclick="document.getElementById('settings-modal').style.display='none'">X</button>
+            <h2>⚙️ Systemeinstellungen</h2>
+            <button class="btn-main" onclick="closeSettings()">X</button>
         </div>
-        
-        <div style="margin-top:15px; display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px;">
+        <div style="margin-top:20px; display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:25px;">
             <div>
-                <h4>System-Design</h4>
-                <label>Version:</label>
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">Version auswählen:</label>
                 <select id="set-view" class="btn-main" style="width:100%; background:var(--card-bg);" onchange="applyView()">
                     <option value="normal">Version 1.1</option>
                     <option value="beta">Beta 1.12</option>
                 </select>
                 <br><br>
-                <label>Theme Verlauf:</label>
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">Uhr Farbverlauf:</label>
                 <select id="set-color" class="btn-main" style="width:100%; background:var(--card-bg);" onchange="applyGradient()">
-                    <option value="linear-gradient(135deg, #8e44ad, #3498db, #2ecc71)">Klassik</option>
-                    <option value="linear-gradient(135deg, #00f2fe, #4facfe)">Neon Cyber</option>
-                    <option value="linear-gradient(135deg, #43e97b, #38f9d7)">Nordic Mint</option>
-                    <option value="linear-gradient(135deg, #f1c40f, #e67e22, #e74c3c)">Sunset</option>
+                    <option value="linear-gradient(135deg, #8e44ad, #3498db, #2ecc71)">Klassisch (Violett/Blau/Grün)</option>
+                    <option value="linear-gradient(135deg, #f1c40f, #e67e22, #e74c3c)">Sunset (Gelb/Orange/Rot)</option>
+                    <option value="linear-gradient(135deg, #00cec9, #0984e3, #6c5ce7)">Ocean Blue (Türkis/Blau/Deep Purple)</option>
+                    <option value="linear-gradient(135deg, #00f2fe, #4facfe)">Neon Cyber (Hellblau/Neon Cyan)</option>
+                    <option value="linear-gradient(135deg, #43e97b, #38f9d7)">Nordic Mint (Frisches Grün/Mint)</option>
+                    <option value="linear-gradient(135deg, #f6d365, #fda085)">Soft Peach (Pastell-Pfirsich)</option>
+                    <option value="linear-gradient(135deg, #f5f7fa, #b8c6db)">Minimal Grey (Edles Industrie-Grau)</option>
                 </select>
+                <br><br>
+                <button id="register-bio-btn" class="btn-main" style="width:100%; background:#2ecc71; color:white; font-weight:bold;" onclick="registerBiometrics()">🧬 Face ID / Touch ID aktivieren</button>
             </div>
-
             <div style="background:rgba(0,0,0,0.03); padding:15px; border-radius:12px;">
-                <h4>👤 Neue Person / Profil hinzufügen</h4>
-                <input type="text" id="new-member-name" placeholder="Name der Person..." style="padding:8px; width:100%; margin-top:5px;">
-                
-                <p style="font-size:0.85rem; font-weight:bold; margin-top:8px;">Kärtchen-Ausstattung (Features):</p>
-                <div class="features-grid">
-                    <label><input type="checkbox" id="feat-todo" checked>📝 To-Do-Liste</label>
-                    <label><input type="checkbox" id="feat-topics" checked>📚 Lernthemen</label>
-                    <label><input type="checkbox" id="feat-cal">📅 Eigener Kalender</label>
-                    <label><input type="checkbox" id="feat-project">🚀 Projekt-Planer</label>
-                    <label><input type="checkbox" id="feat-ideas">💡 Ideen-Speicher</label>
-                    <label><input type="checkbox" id="feat-editor" checked>✍️ Text-Editor / Dokumente</label>
-                </div>
-                <button class="btn-main active" style="width:100%; margin-top:5px;" onclick="createNewMember()">Profil erstellen</button>
-                
-                <h5 style="margin-top:15px; color:#e74c3c;">Profile löschen:</h5>
-                <div id="delete-profiles-list" style="max-height:100px; overflow-y:auto; margin-top:5px;"></div>
+                <label style="font-weight:bold; color:#e74c3c;">🔑 Sicherheits-PIN ändern:</label>
+                <input type="password" id="pin-old" placeholder="Aktueller PIN">
+                <input type="password" id="pin-new1" placeholder="Neuer PIN" maxlength="4">
+                <input type="password" id="pin-new2" placeholder="Bestätigen" maxlength="4">
+                <button class="btn-main active" style="width:100%; margin-top:5px;" onclick="updatePin()">PIN Speichern</button>
             </div>
         </div>
     </div>
@@ -260,22 +369,33 @@
     <div class="login-box" style="text-align:left;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
             <h3 id="modal-title">Details</h3>
-            <button class="btn-main" onclick="document.getElementById('notes-modal').style.display='none'">X</button>
+            <div style="display:flex; gap:5px;">
+                <button id="modal-direct-delete-btn" class="btn-main" style="background:#e74c3c; color:white; padding:5px 10px; font-size:0.85rem;" onclick="deleteActiveItemDirectly()">🗑️ Löschen</button>
+                <button class="btn-main" style="padding:5px 10px;" onclick="closeModal()">X</button>
+            </div>
         </div>
         <ul id="modal-notes-list" style="list-style:none; max-height:200px; overflow-y:auto; margin-bottom:15px;"></ul>
-        <div class="input-group"><input type="text" id="note-input" placeholder="Unterpunkt ergänzen..."><button onclick="addNote()">Merken</button></div>
+        <div class="input-group"><input type="text" id="note-input" placeholder="Notiz hinzufügen..."><button onclick="addNote()">Merken</button></div>
     </div>
 </div>
 
 <script>
+    // --- VARIABLES & SETUP ---
     let GEHEIMER_PIN = "1234";
-    let activeMember = "";
+    let activeMember = "Lukas";
     let config = { view: 'normal', gradient: 'linear-gradient(135deg, #8e44ad, #3498db, #2ecc71)', darkMode: false };
+    let familyData = { Lukas: { topics: [], todos: [] }, Kathrin: { topics: [], todos: [] }, Marlene: { topics: [], todos: [] }, Anna: { todos: [] }, Robert: { todos: [] }, Familie: { events: [], todos: [] } };
     
-    let familyData = {};
-    let collapsedCards = {};
+    let collapsedCards = {}; 
     let monthOffset = 0;
-    let activeDocIndex = 0;
+    let weekOffset = 0;
+    let betaCalScope = "month";
+    let showExpandedNormalCal = false;
+    let currentWeekDates = [];
+    let selectedDayIndex = null;
+    let activeItemIndex = null;
+    let isCalEventModalActive = false;
+    let flipTimer = null;
 
     const firebaseConfig = {
         apiKey: "AIzaSyAxam2TnWekNHYsKGfVfYoFEz2Jo-QZjEs",
@@ -285,357 +405,361 @@
         storageBucket: "dashboard-4dacb.appspot.com",
         appId: "1:252785957836:web:498c30a1eb9e7a6b72db69"
     };
-    
-    // Firebase sicher initialisieren
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
+    firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
     function checkPin() {
-        const inp = document.getElementById('pin-input').value;
-        if(inp === GEHEIMER_PIN) {
+        if(document.getElementById('pin-input').value === GEHEIMER_PIN) {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-content').style.display = 'block';
-            if(document.getElementById('quick-toggle-btn')) {
-                document.getElementById('quick-toggle-btn').style.display = 'flex';
-            }
+            document.getElementById('quick-toggle-btn').style.display = 'flex'; // Zeigt den Button nach Login
             initApp();
-        } else { alert("Falscher PIN!"); }
+        } else { document.getElementById('pin-error').style.display = 'block'; }
     }
 
     function initApp() {
         database.ref('familyZentrumConfig/pin').on('value', (s) => { if(s.val()) GEHEIMER_PIN = s.val().toString(); });
-        
-        database.ref('dynamicFamilyData').on('value', (snapshot) => {
-            try {
-                const data = snapshot.val();
-                if (data && typeof data === 'object') { 
-                    familyData = data; 
-                } else {
-                    familyData = {
-                        Lukas: { features: { todo: true, topics: true, cal: false, project: true, ideas: true, editor: true }, todos: [], topics: [], projects: [], ideas: [], events: [], docs: [{title: 'Notizen', text: ''}] }
-                    };
-                }
-                
-                // Absolute Absicherung der Datenstruktur, damit beim Rendern NIEMALS etwas crasht
-                Object.keys(familyData).forEach(name => {
-                    if (!familyData[name]) familyData[name] = {};
-                    if (!familyData[name].features) familyData[name].features = { todo: true, topics: true, cal: false, project: true, ideas: true, editor: true };
-                    if (!familyData[name].docs || !Array.isArray(familyData[name].docs)) familyData[name].docs = [{title: 'Notizen', text: ''}];
-                    if (!familyData[name].todos) familyData[name].todos = [];
-                    if (!familyData[name].topics) familyData[name].topics = [];
-                    if (!familyData[name].projects) familyData[name].projects = [];
-                    if (!familyData[name].ideas) familyData[name].ideas = [];
-                    if (!familyData[name].events) familyData[name].events = [];
+        database.ref('familyZentrumData').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                Object.keys(familyData).forEach(m => {
+                    if(data[m]) {
+                        familyData[m].todos = data[m].todos || [];
+                        familyData[m].topics = data[m].topics || [];
+                        familyData[m].events = data[m].events || [];
+                    }
                 });
-
-                if (!activeMember || !familyData[activeMember]) { 
-                    activeMember = Object.keys(familyData)[0] || "Lukas"; 
-                }
-                renderAll();
-            } catch(err) {
-                console.error("Fehler beim Laden der Daten:", err);
             }
+            renderAll();
         });
-        
-        updateClock(); 
-        if(!window.clockInterval) window.clockInterval = setInterval(updateClock, 1000); 
-        applyGradient();
+        updateClock(); setInterval(updateClock, 1000); applyGradient(); switchMember(activeMember);
+        checkBiometricAvailability();
+    }
+
+    function checkBiometricAvailability() {
+        if (window.PublicKeyCredential && localStorage.getItem('biometric_registered') === 'true') {
+            document.getElementById('biometric-btn').style.display = 'block';
+        }
+    }
+
+    async function registerBiometrics() {
+        if (!window.PublicKeyCredential) { alert("Face ID wird hier nicht unterstützt."); return; }
+        if (confirm("Face ID / Touch ID zum Entsperren aktivieren?")) {
+            localStorage.setItem('biometric_registered', 'true');
+            alert("Aktiviert!");
+        }
+    }
+
+    function loginWithBiometrics() {
+        if (localStorage.getItem('biometric_registered') === 'true') {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+            document.getElementById('quick-toggle-btn').style.display = 'flex';
+            initApp();
+        }
     }
 
     function updateClock() {
         const now = new Date(); const time = now.toLocaleTimeString('de-DE');
         document.querySelectorAll('.clock-display').forEach(el => el.textContent = time);
-        const smallClock = document.getElementById('beta-clock-small');
-        if(smallClock) smallClock.textContent = time.substring(0,5);
-        document.querySelectorAll('.date-display').forEach(el => el.textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }));
+        document.getElementById('beta-clock-small').textContent = time.substring(0,5);
+        const dateString = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+        document.querySelectorAll('.date-display').forEach(el => el.textContent = dateString);
     }
 
-    function syncData() { database.ref('dynamicFamilyData').set(familyData); }
-
-    function createNewMember() {
-        const nameInput = document.getElementById('new-member-name');
-        const name = nameInput.value.trim();
-        if(!name) return alert("Bitte einen Namen eingeben!");
-        
-        familyData[name] = {
-            features: {
-                todo: document.getElementById('feat-todo').checked,
-                topics: document.getElementById('feat-topics').checked,
-                cal: document.getElementById('feat-cal').checked,
-                project: document.getElementById('feat-project').checked,
-                ideas: document.getElementById('feat-ideas').checked,
-                editor: document.getElementById('feat-editor').checked
-            },
-            todos: [], topics: [], projects: [], ideas: [], events: [], docs: [{title: 'Notizen', text: ''}]
-        };
-        nameInput.value = "";
-        syncData();
-        alert(`Profil für ${name} angelegt!`);
-        renderDeleteProfilesList();
+    function syncData() { database.ref('familyZentrumData').set(familyData); }
+    
+    function toggleSidebar() { 
+        const side = document.getElementById('app-sidebar'); const arrow = document.getElementById('side-arrow');
+        side.classList.toggle('collapsed'); 
+        if(side.classList.contains('collapsed')) { arrow.textContent = "▶"; arrow.style.left = "5px"; } 
+        else { arrow.textContent = "◀"; arrow.style.left = "245px"; }
     }
 
-    function deleteMember(name) {
-        if(confirm(`Möchtest du das Profil von ${name} wirklich komplett löschen?`)) {
-            delete familyData[name];
-            syncData();
-            renderDeleteProfilesList();
-        }
-    }
+    function switchMember(name) { activeMember = name; selectedDayIndex = null; renderNavButtons(); renderAll(); }
 
-    function renderDeleteProfilesList() {
-        const div = document.getElementById('delete-profiles-list'); if(!div) return; div.innerHTML = "";
-        Object.keys(familyData).forEach(name => {
-            div.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>${name}</span><button class="btn-delete" onclick="deleteMember('${name}')">🗑️</button></div>`;
+    function renderNavButtons() {
+        const list = ["Lukas", "Kathrin", "Marlene", "Anna", "Robert", "Familie"];
+        ["person-nav-normal", "person-nav-beta"].forEach(id => {
+            const cont = document.getElementById(id); if(!cont) return; cont.innerHTML = "";
+            list.forEach(m => {
+                const b = document.createElement('button'); b.className = `btn-main ${m === activeMember ? 'active' : ''}`; b.textContent = m; b.onclick = () => switchMember(m); cont.appendChild(b);
+            });
         });
     }
 
-    function openSettings() { renderDeleteProfilesList(); document.getElementById('settings-modal').style.display='flex'; }
-    function switchMember(name) { activeMember = name; activeDocIndex = 0; renderAll(); }
-
     function renderAll() {
-        try {
-            const isBeta = config.view === 'beta';
-            const grid = document.getElementById(isBeta ? 'dashboard-beta' : 'dashboard-normal');
-            const dock = document.getElementById(isBeta ? 'dock-beta' : 'dock-normal');
-            if(!grid) return; grid.innerHTML = ""; if(dock) dock.innerHTML = "";
+        renderNavButtons();
+        const isBeta = config.view === 'beta';
+        const grid = document.getElementById(isBeta ? 'dashboard-beta' : 'dashboard-normal');
+        const dock = document.getElementById(isBeta ? 'dock-beta' : 'dock-normal');
+        
+        grid.innerHTML = "";
+        dock.innerHTML = "";
+        
+        const bigCalBeta = document.getElementById('family-calendar-beta');
+        if(activeMember === 'Familie' && isBeta) { bigCalBeta.style.display = 'block'; renderBigCalendar('cal-grid-body', 'cal-list-body', 'cal-month-name', betaCalScope); } else { bigCalBeta.style.display = 'none'; }
+        
+        const bigCalNormal = document.getElementById('expanded-calendar-normal');
+        if(activeMember === 'Familie' && !isBeta && showExpandedNormalCal) { bigCalNormal.style.display = 'block'; renderBigCalendar('cal-grid-body-normal', 'cal-list-body-normal', 'cal-month-name-normal', 'month'); } else { bigCalNormal.style.display = 'none'; }
 
-            ["person-nav-normal", "person-nav-beta"].forEach(id => {
-                const cont = document.getElementById(id); if(!cont) return; cont.innerHTML = "";
-                Object.keys(familyData).forEach(m => {
-                    const b = document.createElement('button'); b.className = `btn-main ${m === activeMember ? 'active' : ''}`; b.textContent = m; b.onclick = () => switchMember(m); cont.appendChild(b);
-                });
-            });
+        const structures = [
+            { id: 'topics', title: activeMember === 'Familie' ? 'Kalender Termine' : 'Lernthemen', show: activeMember !== 'Anna' && activeMember !== 'Robert' },
+            { id: 'todo-open', title: 'To-Do: Offen', show: true },
+            { id: 'todo-done', title: 'Erledigt', show: true }
+        ];
 
-            const titleNormal = document.getElementById('current-title-normal');
-            if(titleNormal) titleNormal.textContent = `Dashboard von ${activeMember}`;
-            const titleBeta = document.getElementById('beta-title');
-            if(titleBeta) titleBeta.textContent = `Dashboard von ${activeMember}`;
-
-            const currentPerson = familyData[activeMember] || { features: {} };
-            const feats = currentPerson.features || {};
-
-            const cardTypes = [
-                { id: 'cal', title: '📅 Eigener Kalender', show: feats.cal },
-                { id: 'editor', title: '✍️ Text-Editor & Dokumente', show: feats.editor },
-                { id: 'topics', title: '📚 Lernthemen / Fachbereiche', show: feats.topics },
-                { id: 'project', title: '🚀 Projekt-Planer', show: feats.project },
-                { id: 'ideas', title: '💡 Ideen-Speicher', show: feats.ideas },
-                { id: 'todo', title: '📝 Aufgaben (To-Do)', show: feats.todo }
-            ];
-
-            cardTypes.forEach(c => {
-                if(!c.show) return;
-                const cardKey = c.id + activeMember;
-
-                if(collapsedCards[cardKey] && dock) {
-                    const mini = document.createElement('div'); mini.className = "card-mini-floating"; mini.innerHTML = `<span>${c.title}</span> <b>+</b>`; mini.onclick = () => { collapsedCards[cardKey] = false; renderAll(); };
-                    dock.appendChild(mini); return;
-                }
-
-                const card = document.createElement('div');
-                card.className = "card"; card.setAttribute('draggable', 'true'); card.setAttribute('data-id', c.id);
-                if(c.id === 'editor') card.style.height = "520px";
-                
-                let html = `
-                    <div class="card-header"><span>☰ ${c.title}</span><button class="btn-mini" onclick="collapseCardAction('${cardKey}')">➖</button></div>
-                    <div class="card-body">`;
-
-                if(c.id === 'cal') {
-                    html += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <button class="btn-skip-mini" onclick="changeMonth(-1)">◀</button><strong id="cal-title-lbl">Monat</strong><button class="btn-skip-mini" onclick="changeMonth(1)">▶</button>
-                        </div><div class="cal-grid" id="inner-cal-grid"></div><div class="mobile-cal-list" id="inner-cal-list"></div>`;
-                } else if(c.id === 'editor') {
-                    html += `
-                        <div class="editor-container">
-                            <div class="editor-sidebar" id="editor-docs-list"></div>
-                            <div class="editor-main">
-                                <div class="input-group" style="margin-bottom:5px;"><input type="text" id="new-doc-title" placeholder="Neues Dokument..."><button class="btn-main active" onclick="addDocument()">+</button></div>
-                                <textarea class="editor-textarea" id="editor-field" placeholder="Schreib hier etwas..." oninput="autoSaveText()"></textarea>
+        structures.forEach(s => {
+            if(!s.show) return;
+            const cardKey = s.id + activeMember;
+            
+            if(collapsedCards[cardKey]) {
+                const miniTrigger = document.createElement('div');
+                miniTrigger.className = "card-mini-floating";
+                miniTrigger.innerHTML = `<span>${s.title}</span> <b>+</b>`;
+                miniTrigger.onclick = () => toggleCardBody(s.id);
+                dock.appendChild(miniTrigger);
+                return;
+            }
+            
+            const card = document.createElement('div');
+            card.className = "card";
+            card.setAttribute('draggable', 'true'); 
+            card.setAttribute('data-id', s.id);
+            
+            let headerHtml = `
+                <div class="card-header">
+                    <span style="font-weight:bold">☰ ${s.title}</span>
+                    <button class="btn-mini" onclick="toggleCardBody('${s.id}')">➖ Minimieren</button>
+                </div>`;
+            let bodyHtml = `<div class="card-body">`;
+            
+            if(s.id === 'topics' && !isBeta) {
+                if(activeMember === 'Familie') {
+                    bodyHtml += `
+                        <div class="week-navigation-container">
+                            <div class="calendar-week-view">
+                                <button class="btn-skip-mini" onclick="changeWeek(-1); event.stopPropagation();">◀</button>
+                                <div onclick="selectDay(0)">MO<div class="day-number" id="wd-0">-</div></div>
+                                <div onclick="selectDay(1)">DI<div class="day-number" id="wd-1">-</div></div>
+                                <div onclick="selectDay(2)">MI<div class="day-number" id="wd-2">-</div></div>
+                                <div onclick="selectDay(3)">DO<div class="day-number" id="wd-3">-</div></div>
+                                <div onclick="selectDay(4)">FR<div class="day-number" id="wd-4">-</div></div>
+                                <div onclick="selectDay(5)">SA<div class="day-number" id="wd-5">-</div></div>
+                                <div onclick="selectDay(6)">SO<div class="day-number" id="wd-6">-</div></div>
+                                <button class="btn-skip-mini" onclick="changeWeek(1); event.stopPropagation();">▶</button>
                             </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <button class="btn-main" onclick="toggleExpandCalendarNormal()">🔍 Vergrößern (Monat)</button>
+                        </div>
+                        <div class="day-preview-box" id="day-preview-container" style="display:none;"><div id="day-preview-text">Keine Termine</div></div>
+                        <div class="input-group" style="flex-direction:column; gap:5px;">
+                            <input type="text" id="event-input" placeholder="Termin-Name...">
+                            <input type="date" id="event-start">
+                            <button class="btn-main active" onclick="addEvent()">Termin eintragen</button>
                         </div>`;
-                } else {
-                    let placeholderText = "Hinzufügen...";
-                    if(c.id === 'project') placeholderText = "Neuer Meilenstein...";
-                    if(c.id === 'ideas') placeholderText = "Kreative Idee...";
-                    html += `<div class="input-group"><input type="text" id="input-${c.id}" placeholder="${placeholderText}"><button class="btn-main active" onclick="addItem('${c.id}')">+</button></div><ul class="list-container" id="list-${c.id}"></ul>`;
-                }
+                } else { bodyHtml += `<div class="input-group"><input type="text" id="topic-input" placeholder="Neues Thema..."><button class="btn-main active" onclick="addTopic()">+</button></div>`; }
+            } else if (s.id === 'todo-open') { bodyHtml += `<div class="input-group"><input type="text" id="todo-input" placeholder="Aufgabe..."><button class="btn-main active" onclick="addTodo()">+</button></div>`; }
 
-                html += `</div>`;
-                card.innerHTML = html;
-                grid.appendChild(card);
-
-                if(c.id === 'cal') { renderInnerCalendar(); } 
-                else if(c.id === 'editor') { renderEditorWorkspace(); }
-                else { populateList(c.id); }
-            });
-
-            setupDragAndDrop(grid);
-        } catch(e) {
-            console.error("Fehler beim Zeichnen des Dashboards:", e);
-        }
+            bodyHtml += `<ul class="list-container" id="list-${s.id}"></ul></div>`;
+            card.innerHTML = headerHtml + bodyHtml;
+            grid.appendChild(card);
+        });
+        fillLists();
+        setupDragAndDrop(grid); 
     }
 
-    function collapseCardAction(key) { collapsedCards[key] = true; renderAll(); }
+    // --- QUICK TOGGLE LOGIK ---
+    function quickToggleView() {
+        config.view = config.view === 'normal' ? 'beta' : 'normal';
+        document.getElementById('set-view').value = config.view; // Synchronisiert das Einstellungs-Menü
+        applyView();
+    }
 
     function setupDragAndDrop(grid) {
         const cards = grid.querySelectorAll('.card');
-        let placeholder = document.createElement('div'); placeholder.className = 'card-placeholder';
         cards.forEach(card => {
-            card.addEventListener('dragstart', (e) => { card.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
-            card.addEventListener('dragend', () => { card.classList.remove('dragging'); if(placeholder.parentNode) placeholder.parentNode.removeChild(placeholder); });
+            card.addEventListener('dragstart', () => card.classList.add('dragging'));
+            card.addEventListener('dragend', () => card.classList.remove('dragging'));
         });
-        grid.addEventListener('dragover', (e) => {
-            e.preventDefault(); const draggingCard = document.querySelector('.dragging'); if(!draggingCard) return;
-            const afterElement = getDragAfterElement(grid, e.clientY);
-            if (afterElement == null) { grid.appendChild(placeholder); grid.appendChild(draggingCard); } 
-            else { grid.insertBefore(placeholder, afterElement); grid.insertBefore(draggingCard, placeholder); }
+
+        grid.addEventListener('dragover', e => {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(grid, e.clientX, e.clientY);
+            const draggingCard = document.querySelector('.dragging');
+            if (draggingCard) {
+                if (afterElement == null) { grid.appendChild(draggingCard); } 
+                else { grid.insertBefore(draggingCard, afterElement); }
+            }
         });
     }
 
-    function getDragAfterElement(grid, y) {
-        const draggableElements = [...grid.querySelectorAll('.card:not(.dragging):not(.card-placeholder)')];
+    function getDragAfterElement(grid, x, y) {
+        const draggableElements = [...grid.querySelectorAll('.card:not(.dragging)')];
         return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect(); const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } else { return closest; }
+            const box = child.getBoundingClientRect();
+            const offsetX = x - box.left - box.width / 2;
+            const offsetY = y - box.top - box.height / 2;
+            if (offsetY < 0 && offsetY > closest.offset) { return { offset: offsetY, element: child }; } 
+            else { return closest; }
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
-    function renderEditorWorkspace() {
-        const person = familyData[activeMember];
-        if (!person || !person.docs) return;
-        const sidebar = document.getElementById('editor-docs-list');
-        const textarea = document.getElementById('editor-field');
-        if(!sidebar || !textarea) return;
-
-        sidebar.innerHTML = "";
-        person.docs.forEach((doc, idx) => {
-            const btn = document.createElement('button');
-            btn.className = `doc-tab ${idx === activeDocIndex ? 'active' : ''}`;
-            btn.innerHTML = `<span>📄 ${doc.title || 'Unbenannt'}</span><span style="color:#e74c3c; font-size:0.75rem;" onclick="event.stopPropagation(); deleteDocument(${idx})">🗑️</span>`;
-            btn.onclick = () => { activeDocIndex = idx; renderEditorWorkspace(); };
-            sidebar.appendChild(btn);
-        });
-
-        if(person.docs[activeDocIndex]) {
-            textarea.value = person.docs[activeDocIndex].text || "";
-            textarea.disabled = false;
-        } else {
-            textarea.value = "Klicke links auf ein Dokument oder erstelle ein neues!";
-            textarea.disabled = true;
-        }
+    function toggleCardBody(id) { collapsedCards[id + activeMember] = !collapsedCards[id + activeMember]; renderAll(); }
+    function toggleExpandCalendarNormal() { showExpandedNormalCal = !showExpandedNormalCal; renderAll(); }
+    
+    function setBetaCalScope(scope) {
+        betaCalScope = scope;
+        document.getElementById('btn-view-month').classList.toggle('active', scope === 'month');
+        document.getElementById('btn-view-week').classList.toggle('active', scope === 'week');
+        renderBigCalendar('cal-grid-body', 'cal-list-body', 'cal-month-name', scope);
     }
 
-    function addDocument() {
-        const inp = document.getElementById('new-doc-title'); const title = inp.value.trim(); if(!title) return;
-        const person = familyData[activeMember];
-        if(!person.docs) person.docs = [];
-        person.docs.push({title: title, text: ''});
-        activeDocIndex = person.docs.length - 1; inp.value = ""; syncData();
-    }
-
-    function deleteDocument(idx) {
-        if(confirm("Dieses Dokument unwiderruflich löschen?")) {
-            familyData[activeMember].docs.splice(idx, 1);
-            activeDocIndex = 0; if(familyData[activeMember].docs.length === 0) familyData[activeMember].docs = [{title: 'Notizen', text: ''}];
-            syncData();
-        }
-    }
-
-    function autoSaveText() {
-        const textarea = document.getElementById('editor-field');
-        if(!textarea || !familyData[activeMember] || !familyData[activeMember].docs || !familyData[activeMember].docs[activeDocIndex]) return;
-        familyData[activeMember].docs[activeDocIndex].text = textarea.value;
-        if(window.saveTimeout) clearTimeout(window.saveTimeout);
-        window.saveTimeout = setTimeout(() => { syncData(); }, 1000);
-    }
-
-    function populateList(type) {
-        const ul = document.getElementById(`list-${type}`); if(!ul) return;
-        ul.innerHTML = "";
-        const person = familyData[activeMember];
-        if(!person) return;
+    function renderBigCalendar(gridId, listId, titleId, scope) {
+        const grid = document.getElementById(gridId); const list = document.getElementById(listId);
+        grid.innerHTML = ""; list.innerHTML = ""; const now = new Date();
         
-        if(type === 'todo') {
-            const arr = person.todos || [];
-            arr.forEach((item, i) => {
-                ul.innerHTML += `<li class="list-item"><span><input type="checkbox" ${item.completed?'checked':''} onchange="toggleTodoCheck(${i})"> <span style="${item.completed?'text-decoration:line-through;':''}">${item.title}</span></span><button class="btn-delete" onclick="deleteItemData('todos', ${i})">X</button></li>`;
-            });
+        if (scope === "month") {
+            const firstDay = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0);
+            document.getElementById(titleId).textContent = firstDay.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+            let startShift = (firstDay.getDay() + 6) % 7;
+            for(let i=0; i<startShift; i++) grid.innerHTML += `<div class="cal-cell" style="opacity:0.2;"></div>`;
+            for(let d=1; d<=lastDay.getDate(); d++) { buildCalCell(grid, list, new Date(now.getFullYear(), now.getMonth() + monthOffset, d), d, now); }
+        } else if (scope === "week") {
+            const currentDay = now.getDay(); const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+            const monday = new Date(now); monday.setDate(now.getDate() + distanceToMonday + (monthOffset * 7));
+            const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+            document.getElementById(titleId).textContent = `KW ${getWeekNumber(monday)}`;
+            for(let i=0; i<7; i++) { let cellDate = new Date(monday); cellDate.setDate(monday.getDate() + i); buildCalCell(grid, list, cellDate, cellDate.toLocaleDateString('de-DE', {weekday: 'short'}) + " " + cellDate.getDate(), now); }
+        }
+    }
+
+    function buildCalCell(grid, list, cellDate, label, now) {
+        const dateStr = cellDate.toISOString().split('T')[0]; const isToday = cellDate.toDateString() === now.toDateString();
+        const cell = document.createElement('div'); cell.className = `cal-cell ${isToday ? 'today' : ''}`; cell.innerHTML = `<div class="cal-num">${label}</div>`; cell.onclick = () => openEventModal(dateStr);
+        
+        const row = document.createElement('div'); row.className = `mobile-cal-row ${isToday ? 'today' : ''}`; row.innerHTML = `<div class="mobile-cal-date-label"><span>${cellDate.toLocaleDateString('de-DE', {weekday: 'short', day: 'numeric', month: 'numeric'})}</span></div>`; row.onclick = () => openEventModal(dateStr);
+        const mobileEventsContainer = document.createElement('div'); mobileEventsContainer.className = "mobile-cal-events-container";
+        let dayHasEvents = false;
+
+        (familyData.Familie.events || []).forEach((e, idx) => {
+            if(dateStr === e.start) {
+                dayHasEvents = true;
+                cell.innerHTML += `<div class="cal-event" style="background:${e.color || '#3498db'};" onclick="event.stopPropagation(); openNotes(${idx}, true);">${e.name}</div>`;
+                const pill = document.createElement('div'); pill.className = "mobile-cal-pill"; pill.style.backgroundColor = e.color || '#3498db'; pill.textContent = e.name;
+                pill.onclick = (event) => { event.stopPropagation(); openNotes(idx, true); };
+                mobileEventsContainer.appendChild(pill);
+            }
+        });
+        grid.appendChild(cell);
+        if(dayHasEvents || isToday) { row.appendChild(mobileEventsContainer); list.appendChild(row); }
+    }
+
+    function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var s = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil((((d - s) / 86400000) + 1)/7); }
+
+    function fillLists() {
+        const data = familyData[activeMember]; const leftList = document.getElementById('list-topics'); if(!leftList) return;
+        if(activeMember === 'Familie') {
+            updateNormalWeekBar();
+            (data.events || []).forEach((e, i) => { leftList.innerHTML += `<li class="list-item"><span class="clickable-text" onclick="openNotes(${i}, true)"><strong>${e.name}</strong> <small>(${new Date(e.start).toLocaleDateString('de-DE')})</small></span><button class="btn-delete" onclick="deleteEvent(${i})">X</button></li>`; });
         } else {
-            let dbKey = type === 'topics' ? 'topics' : (type === 'project' ? 'projects' : 'ideas');
-            const arr = person[dbKey] || [];
-            arr.forEach((item, i) => {
-                ul.innerHTML += `<li class="list-item"><span class="clickable-text" onclick="openNotesPopup('${dbKey}', ${i})">🔹 <strong>${item.name}</strong> <small>(${item.notes?item.notes.length:0} Notizen)</small></span><button class="btn-delete" onclick="deleteItemData('${dbKey}', ${i})">X</button></li>`;
+            (data.topics || []).forEach((t, i) => { leftList.innerHTML += `<li class="list-item"><span class="clickable-text" onclick="openNotes(${i}, false)">${t.name} <small>(${t.notes?t.notes.length:0} Infos)</small></span><button class="btn-delete" onclick="deleteTopic(${i})">X</button></li>`; });
+        }
+        const oList = document.getElementById('list-todo-open'); const dList = document.getElementById('list-todo-done');
+        if(oList && dList) {
+            (data.todos || []).forEach((todo, i) => {
+                const html = `<li class="list-item"><span style="display:flex; gap:10px; align-items:center;"><input type="checkbox" ${todo.completed?'checked':''} onchange="toggleTodo(${i})"><span>${todo.title}</span></span><button class="btn-delete" onclick="deleteTodo(${i})">X</button></li>`;
+                if(todo.completed) dList.innerHTML += html; else oList.innerHTML += html;
             });
         }
     }
 
-    function addItem(type) {
-        const val = document.getElementById(`input-${type}`).value.trim(); if(!val) return;
-        const person = familyData[activeMember];
-        if(type === 'todo') { if(!person.todos) person.todos = []; person.todos.push({title: val, completed: false}); }
-        if(type === 'topics') { if(!person.topics) person.topics = []; person.topics.push({name: val, notes: []}); }
-        if(type === 'project') { if(!person.projects) person.projects = []; person.projects.push({name: val, notes: []}); }
-        if(type === 'ideas') { if(!person.ideas) person.ideas = []; person.ideas.push({name: val, notes: []}); }
-        syncData();
-        document.getElementById(`input-${type}`).value = "";
+    function openEventModal(dateStr) { document.getElementById('quick-event-date').value = dateStr; document.getElementById('quick-event-name').value = ""; document.getElementById('event-modal').style.display = 'flex'; }
+    function closeEventModal() { document.getElementById('event-modal').style.display = 'none'; }
+    function saveQuickEvent() {
+        const name = document.getElementById('quick-event-name').value; const date = document.getElementById('quick-event-date').value; const color = document.getElementById('quick-event-color').value;
+        if(name.trim() && date) { familyData.Familie.events.push({ name: name.trim(), start: date, end: date, color: color, notes: [] }); syncData(); closeEventModal(); }
     }
-
-    function toggleTodoCheck(i) { familyData[activeMember].todos[i].completed = !familyData[activeMember].todos[i].completed; syncData(); }
-    function deleteItemData(key, i) { if(confirm("Eintrag löschen?")) { familyData[activeMember][key].splice(i,1); syncData(); } }
-
-    let globalKey = "", globalIdx = 0;
-    window.openNotesPopup = function(key, i) {
-        globalKey = key; globalIdx = i; const item = familyData[activeMember][key][i];
-        document.getElementById('modal-title').textContent = item.name; document.getElementById('notes-modal').style.display = 'flex';
-        renderPopupNotesList();
-    };
-    function renderPopupNotesList() {
-        const ul = document.getElementById('modal-notes-list'); ul.innerHTML = "";
-        const item = familyData[activeMember][globalKey][globalIdx]; const notes = item.notes || [];
-        if(notes.length === 0) ul.innerHTML = "<li>Keine Unterpunkte</li>";
-        notes.forEach((n, ni) => { ul.innerHTML += `<li style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>• ${n}</span><button class="btn-delete" onclick="deletePopupNote(${ni})">X</button></li>`; });
-    }
-    window.addNote = function() {
-        const inp = document.getElementById('note-input'); if(!inp.value.trim()) return;
-        if(!familyData[activeMember][globalKey][globalIdx].notes) familyData[activeMember][globalKey][globalIdx].notes = [];
-        familyData[activeMember][globalKey][globalIdx].notes.push(inp.value.trim()); inp.value = ""; syncData(); renderPopupNotesList();
-    };
-    window.deletePopupNote = function(ni) { familyData[activeMember][globalKey][globalIdx].notes.splice(ni,1); syncData(); renderPopupNotesList(); };
 
     function changeMonth(dir) { monthOffset += dir; renderAll(); }
-    function renderInnerCalendar() {
-        const grid = document.getElementById('inner-cal-grid'); const list = document.getElementById('inner-cal-list'); if(!grid) return; grid.innerHTML = ""; if(list) list.innerHTML = "";
-        const now = new Date(); const firstDay = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1); const lastDay = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0);
-        const titleLbl = document.getElementById('cal-title-lbl');
-        if(titleLbl) titleLbl.textContent = firstDay.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
-        let startShift = (firstDay.getDay() + 6) % 7;
-        for(let i=0; i<startShift; i++) grid.innerHTML += `<div class="cal-cell" style="opacity:0.1;"></div>`;
-        const personEvents = familyData[activeMember].events || [];
-        for(let d=1; d<=lastDay.getDate(); d++) {
-            const cellDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, d); const dateStr = cellDate.toISOString().split('T')[0]; const isToday = cellDate.toDateString() === now.toDateString();
-            const cell = document.createElement('div'); cell.className = `cal-cell ${isToday ? 'today' : ''}`; cell.innerHTML = `<div style="font-weight:bold; font-size:0.85rem;">${d}</div>`;
-            cell.onclick = () => { document.getElementById('quick-event-date').value = dateStr; document.getElementById('quick-event-name').value=""; document.getElementById('event-modal').style.display='flex'; };
-            personEvents.forEach((e, ei) => { if(e.start === dateStr) { cell.innerHTML += `<div class="cal-event" style="background:${e.color || '#3498db'};" onclick="event.stopPropagation(); if(confirm('Termin löschen?')) { familyData[activeMember].events.splice(${ei},1); syncData(); }">${e.name}</div>`; } });
-            grid.appendChild(cell);
+    function jumpToToday() { monthOffset = 0; renderAll(); }
+
+    function updateNormalWeekBar() {
+        const now = new Date(); const currentDay = now.getDay(); const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay; const monday = new Date(now); monday.setDate(now.getDate() + distanceToMonday + (weekOffset * 7));
+        currentWeekDates = []; for(let i = 0; i < 7; i++) { let d = new Date(monday); d.setDate(monday.getDate() + i); currentWeekDates.push({ dayNum: d.getDate(), fullDateStr: d.toISOString().split('T')[0] }); }
+        for(let i = 0; i < 7; i++) {
+            const el = document.getElementById(`wd-${i}`); if(!el) continue; el.textContent = currentWeekDates[i].dayNum; el.className = 'day-number' + (selectedDayIndex === i ? ' selected-day' : ''); el.style.backgroundColor = ''; el.style.color = '';
+            (familyData.Familie.events || []).forEach(e => { if(currentWeekDates[i].fullDateStr === e.start) { el.style.backgroundColor = e.color || '#e67e22'; el.style.color = 'white'; } });
         }
     }
 
-    function saveQuickEvent() {
-        const name = document.getElementById('quick-event-name').value.trim(); const date = document.getElementById('quick-event-date').value; const color = document.getElementById('quick-event-color').value;
-        if(!name) return; if(!familyData[activeMember].events) familyData[activeMember].events = [];
-        familyData[activeMember].events.push({ name: name, start: date, color: color });
-        syncData(); document.getElementById('event-modal').style.display = 'none';
+    function selectDay(index) {
+        const container = document.getElementById('day-preview-container');
+        if (selectedDayIndex === index) { selectedDayIndex = null; container.style.display = 'none'; } 
+        else {
+            selectedDayIndex = index; const target = currentWeekDates[index].fullDateStr; const active = (familyData.Familie.events || []).filter(e => target === e.start); container.style.display = 'block';
+            document.getElementById('day-preview-text').innerHTML = active.length === 0 ? `<em>Keine Termine</em>` : active.map(e => `• <strong>${e.name}</strong>`).join('<br>');
+        }
+        renderAll();
     }
 
-    function toggleSidebar() { const side = document.getElementById('app-sidebar'); if(!side) return; side.classList.toggle('collapsed'); const arrow = document.getElementById('side-arrow'); if(arrow) arrow.textContent = side.classList.contains('collapsed') ? "▶" : "◀"; }
-    function quickToggleView() { config.view = config.view === 'normal' ? 'beta' : 'normal'; const setV = document.getElementById('set-view'); if(setV) setV.value = config.view; applyView(); }
-    function applyView() { const setV = document.getElementById('set-view'); if(setV) config.view = setV.value; const vn = document.getElementById('view-normal'); if(vn) vn.style.display = config.view === 'normal' ? 'block' : 'none'; const vb = document.getElementById('view-beta'); if(vb) vb.style.display = config.view === 'beta' ? 'flex' : 'none'; const qxt = document.getElementById('quick-toggle-text'); if(qxt) qxt.textContent = config.view === 'normal' ? 'Wechsle zu Beta 1.12' : 'Wechsle zu Version 1.1'; renderAll(); }
-    function applyGradient() { const setC = document.getElementById('set-color'); if(!setC) return; const grad = setC.value; config.gradient = grad; document.getElementById('app-body').style.setProperty('--header-gradient', grad); const extractedColor = grad.includes('f1c40f') ? '#e67e22' : (grad.includes('00f2fe') ? '#00f2fe' : '#8e44ad'); document.getElementById('app-body').style.setProperty('--primary-color', extractedColor); renderAll(); }
+    function flipHeader() { document.querySelectorAll('.header-flip-element').forEach(el => el.classList.add('flipped')); if(flipTimer) clearTimeout(flipTimer); flipTimer = setTimeout(() => document.querySelectorAll('.header-flip-element').forEach(el => el.classList.remove('flipped')), 5000); }
+    function openSettings() { document.getElementById('pin-old').value = ""; document.getElementById('pin-new1').value = ""; document.getElementById('pin-new2').value = ""; document.getElementById('settings-modal').style.display='flex'; }
+    function closeSettings() { document.getElementById('settings-modal').style.display='none'; }
     function toggleDarkMode() { config.darkMode = !config.darkMode; document.getElementById('app-body').classList.toggle('dark-mode', config.darkMode); }
-    function flipHeader() { document.querySelectorAll('.header-flip-element').forEach(el => el.classList.add('flipped')); setTimeout(() => document.querySelectorAll('.header-flip-element').forEach(el => el.classList.remove('flipped')), 4000); }
+    
+    function applyGradient() {
+        const grad = document.getElementById('set-color').value; config.gradient = grad; document.getElementById('app-body').style.setProperty('--header-gradient', grad);
+        const extractedColor = grad.includes('f1c40f') ? '#e67e22' : (grad.includes('00cec9') ? '#0984e3' : (grad.includes('00f2fe') ? '#00f2fe' : '#8e44ad'));
+        document.getElementById('app-body').style.setProperty('--primary-color', extractedColor); renderAll();
+    }
+    
+    function applyView() { 
+        config.view = document.getElementById('set-view').value; 
+        document.getElementById('view-normal').style.display = config.view === 'normal' ? 'block' : 'none'; 
+        document.getElementById('view-beta').style.display = config.view === 'beta' ? 'flex' : 'none'; 
+        
+        // Text des Schnell-Wechsel-Buttons aktualisieren
+        const toggleText = document.getElementById('quick-toggle-text');
+        if(toggleText) {
+            toggleText.textContent = config.view === 'normal' ? 'Wechsle zu Beta 1.12' : 'Wechsle zu Version 1.1';
+        }
+        
+        switchMember(activeMember); 
+    }
+    
+    function updatePin() {
+        const oldP = document.getElementById('pin-old').value.trim(); const n1 = document.getElementById('pin-new1').value.trim(); const n2 = document.getElementById('pin-new2').value.trim();
+        if(oldP === GEHEIMER_PIN) {
+            if(n1 === n2 && n1.length === 4) {
+                GEHEIMER_PIN = n1; database.ref('familyZentrumConfig/pin').set(n1)
+                    .then(() => { alert("🚀 PIN erfolgreich geändert!"); closeSettings(); })
+                    .catch(() => { alert("Fehler beim Cloud-Speichern!"); });
+            } else { alert("Die neuen PINs stimmen nicht überein!"); }
+        } else { alert("Der aktuelle PIN ist falsch!"); }
+    }
+
+    function openNotes(i, isCalEvent) { 
+        activeItemIndex = i; isCalEventModalActive = isCalEvent; const delBtn = document.getElementById('modal-direct-delete-btn');
+        if(isCalEvent) { document.getElementById('modal-title').textContent = familyData.Familie.events[i].name; delBtn.style.display = "block"; } 
+        else { document.getElementById('modal-title').textContent = familyData[activeMember].topics[i].name; delBtn.style.display = "block"; }
+        document.getElementById('notes-modal').style.display = 'flex'; renderNotes(); 
+    }
+    function closeModal() { document.getElementById('notes-modal').style.display = 'none'; renderAll(); }
+    function deleteActiveItemDirectly() { if(confirm("Möchtest du das wirklich sofort löschen?")) { if(isCalEventModalActive) { familyData.Familie.events.splice(activeItemIndex, 1); selectedDayIndex = null; } else { familyData[activeMember].topics.splice(activeItemIndex, 1); } syncData(); closeModal(); } }
+    function renderNotes() { const list = document.getElementById('modal-notes-list'); list.innerHTML = ''; let notes = isCalEventModalActive ? familyData.Familie.events[activeItemIndex].notes || [] : familyData[activeMember].topics[activeItemIndex].notes || []; if(notes.length === 0) { list.innerHTML = '<li>Keine Notizen</li>'; return; } notes.forEach((n, ni) => { list.innerHTML += `<li style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>• ${n}</span><button class="btn-delete" onclick="deleteNote(${ni})">X</button></li>`; }); }
+    function addNote() { const input = document.getElementById('note-input'); if(input.value.trim()) { let item = isCalEventModalActive ? familyData.Familie.events[activeItemIndex] : familyData[activeMember].topics[activeItemIndex]; if(!item.notes) item.notes = []; item.notes.push(input.value.trim()); input.value=''; syncData(); renderNotes(); } }
+    function deleteNote(ni) { if(isCalEventModalActive) { familyData.Familie.events[activeItemIndex].notes.splice(ni,1); } else { familyData[activeMember].topics[activeItemIndex].notes.splice(ni,1); } syncData(); renderNotes(); }
+    function addEvent() { const name = document.getElementById('event-input'); const start = document.getElementById('event-start'); if(name.value.trim() && start.value) { familyData.Familie.events.push({ name: name.value.trim(), start: start.value, end: start.value, color: '#3498db', notes: [] }); name.value=''; start.value=''; syncData(); } }
+    function deleteEvent(i) { if(confirm("Termin löschen?")) { familyData.Familie.events.splice(i,1); selectedDayIndex = null; syncData(); } }
+    function addTopic() { const input = document.getElementById('topic-input'); if(input.value.trim()) { familyData[activeMember].topics.push({name: input.value.trim(), notes: []}); input.value=''; syncData(); } }
+    function deleteTopic(i) { if(confirm("Thema löschen?")) { familyData[activeMember].topics.splice(i,1); syncData(); } }
+    function addTodo() { const input = document.getElementById('todo-input'); if(input.value.trim()) { if(!familyData[activeMember].todos) familyData[activeMember].todos = []; familyData[activeMember].todos.push({title: input.value.trim(), completed: false}); input.value=''; syncData(); } }
+    function toggleTodo(i) { familyData[activeMember].todos[i].completed = !familyData[activeMember].todos[i].completed; syncData(); }
+    function deleteTodo(i) { familyData[activeMember].todos.splice(i,1); syncData(); }
+    function changeWeek(dir) { weekOffset += dir; renderAll(); }
 </script>
 </body>
 </html>
