@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Familien- & Projekt-Zentrum v1.46</title>
+    <title>Familien- & Projekt-Zentrum v1.47</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
@@ -149,7 +149,7 @@
                     <p class="date-display">Lade...</p>
                 </div>
                 <div class="back" onclick="event.stopPropagation()">
-                    <h2>System Version 1.46</h2>
+                    <h2>System Version 1.47</h2>
                     <button class="btn-main active" style="margin-top:10px;" onclick="openSettings()">⚙️ Einstellungen & Profile</button>
                 </div>
             </div>
@@ -285,50 +285,70 @@
         storageBucket: "dashboard-4dacb.appspot.com",
         appId: "1:252785957836:web:498c30a1eb9e7a6b72db69"
     };
-    firebase.initializeApp(firebaseConfig);
+    
+    // Firebase sicher initialisieren
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
     const database = firebase.database();
 
     function checkPin() {
-        if(document.getElementById('pin-input').value === GEHEIMER_PIN) {
+        const inp = document.getElementById('pin-input').value;
+        if(inp === GEHEIMER_PIN) {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-content').style.display = 'block';
-            document.getElementById('quick-toggle-btn').style.display = 'flex';
+            if(document.getElementById('quick-toggle-btn')) {
+                document.getElementById('quick-toggle-btn').style.display = 'flex';
+            }
             initApp();
         } else { alert("Falscher PIN!"); }
     }
 
     function initApp() {
         database.ref('familyZentrumConfig/pin').on('value', (s) => { if(s.val()) GEHEIMER_PIN = s.val().toString(); });
+        
         database.ref('dynamicFamilyData').on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data) { 
-                familyData = data; 
-            } else {
-                // Fallback, wenn die DB komplett leer ist
-                familyData = {
-                    Lukas: { features: { todo: true, topics: true, cal: false, project: true, ideas: true, editor: true }, todos: [], topics: [], projects: [], ideas: [], events: [], docs: [{title: 'Notizen', text: ''}] }
-                };
-            }
-            
-            // --- HIER IST DER RETTENDE SICHERHEITS-CHECK ---
-            // Wir prüfen bei JEDER Person, ob die neuen Feature-Strukturen existieren, damit es nicht abstürzt
-            Object.keys(familyData).forEach(name => {
-                if(!familyData[name].features) familyData[name].features = { todo: true, topics: true };
-                if(!familyData[name].docs) familyData[name].docs = [{title: 'Notizen', text: ''}];
-            });
+            try {
+                const data = snapshot.val();
+                if (data && typeof data === 'object') { 
+                    familyData = data; 
+                } else {
+                    familyData = {
+                        Lukas: { features: { todo: true, topics: true, cal: false, project: true, ideas: true, editor: true }, todos: [], topics: [], projects: [], ideas: [], events: [], docs: [{title: 'Notizen', text: ''}] }
+                    };
+                }
+                
+                // Absolute Absicherung der Datenstruktur, damit beim Rendern NIEMALS etwas crasht
+                Object.keys(familyData).forEach(name => {
+                    if (!familyData[name]) familyData[name] = {};
+                    if (!familyData[name].features) familyData[name].features = { todo: true, topics: true, cal: false, project: true, ideas: true, editor: true };
+                    if (!familyData[name].docs || !Array.isArray(familyData[name].docs)) familyData[name].docs = [{title: 'Notizen', text: ''}];
+                    if (!familyData[name].todos) familyData[name].todos = [];
+                    if (!familyData[name].topics) familyData[name].topics = [];
+                    if (!familyData[name].projects) familyData[name].projects = [];
+                    if (!familyData[name].ideas) familyData[name].ideas = [];
+                    if (!familyData[name].events) familyData[name].events = [];
+                });
 
-            if (!activeMember || !familyData[activeMember]) { 
-                activeMember = Object.keys(familyData)[0] || "Lukas"; 
+                if (!activeMember || !familyData[activeMember]) { 
+                    activeMember = Object.keys(familyData)[0] || "Lukas"; 
+                }
+                renderAll();
+            } catch(err) {
+                console.error("Fehler beim Laden der Daten:", err);
             }
-            renderAll();
         });
-        updateClock(); setInterval(updateClock, 1000); applyGradient();
+        
+        updateClock(); 
+        if(!window.clockInterval) window.clockInterval = setInterval(updateClock, 1000); 
+        applyGradient();
     }
 
     function updateClock() {
         const now = new Date(); const time = now.toLocaleTimeString('de-DE');
         document.querySelectorAll('.clock-display').forEach(el => el.textContent = time);
-        document.getElementById('beta-clock-small').textContent = time.substring(0,5);
+        const smallClock = document.getElementById('beta-clock-small');
+        if(smallClock) smallClock.textContent = time.substring(0,5);
         document.querySelectorAll('.date-display').forEach(el => el.textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }));
     }
 
@@ -375,84 +395,90 @@
     function switchMember(name) { activeMember = name; activeDocIndex = 0; renderAll(); }
 
     function renderAll() {
-        const isBeta = config.view === 'beta';
-        const grid = document.getElementById(isBeta ? 'dashboard-beta' : 'dashboard-normal');
-        const dock = document.getElementById(isBeta ? 'dock-beta' : 'dock-normal');
-        if(!grid) return; grid.innerHTML = ""; dock.innerHTML = "";
+        try {
+            const isBeta = config.view === 'beta';
+            const grid = document.getElementById(isBeta ? 'dashboard-beta' : 'dashboard-normal');
+            const dock = document.getElementById(isBeta ? 'dock-beta' : 'dock-normal');
+            if(!grid) return; grid.innerHTML = ""; if(dock) dock.innerHTML = "";
 
-        ["person-nav-normal", "person-nav-beta"].forEach(id => {
-            const cont = document.getElementById(id); if(!cont) return; cont.innerHTML = "";
-            Object.keys(familyData).forEach(m => {
-                const b = document.createElement('button'); b.className = `btn-main ${m === activeMember ? 'active' : ''}`; b.textContent = m; b.onclick = () => switchMember(m); cont.appendChild(b);
+            ["person-nav-normal", "person-nav-beta"].forEach(id => {
+                const cont = document.getElementById(id); if(!cont) return; cont.innerHTML = "";
+                Object.keys(familyData).forEach(m => {
+                    const b = document.createElement('button'); b.className = `btn-main ${m === activeMember ? 'active' : ''}`; b.textContent = m; b.onclick = () => switchMember(m); cont.appendChild(b);
+                });
             });
-        });
 
-        document.getElementById('current-title-normal').textContent = `Dashboard von ${activeMember}`;
-        document.getElementById('beta-title').textContent = `Dashboard von ${activeMember}`;
+            const titleNormal = document.getElementById('current-title-normal');
+            if(titleNormal) titleNormal.textContent = `Dashboard von ${activeMember}`;
+            const titleBeta = document.getElementById('beta-title');
+            if(titleBeta) titleBeta.textContent = `Dashboard von ${activeMember}`;
 
-        const currentPerson = familyData[activeMember] || { features: {} };
-        const feats = currentPerson.features || {};
+            const currentPerson = familyData[activeMember] || { features: {} };
+            const feats = currentPerson.features || {};
 
-        const cardTypes = [
-            { id: 'cal', title: '📅 Eigener Kalender', show: feats.cal },
-            { id: 'editor', title: '✍️ Text-Editor & Dokumente', show: feats.editor },
-            { id: 'topics', title: '📚 Lernthemen / Fachbereiche', show: feats.topics },
-            { id: 'project', title: '🚀 Projekt-Planer', show: feats.project },
-            { id: 'ideas', title: '💡 Ideen-Speicher', show: feats.ideas },
-            { id: 'todo', title: '📝 Aufgaben (To-Do)', show: feats.todo }
-        ];
+            const cardTypes = [
+                { id: 'cal', title: '📅 Eigener Kalender', show: feats.cal },
+                { id: 'editor', title: '✍️ Text-Editor & Dokumente', show: feats.editor },
+                { id: 'topics', title: '📚 Lernthemen / Fachbereiche', show: feats.topics },
+                { id: 'project', title: '🚀 Projekt-Planer', show: feats.project },
+                { id: 'ideas', title: '💡 Ideen-Speicher', show: feats.ideas },
+                { id: 'todo', title: '📝 Aufgaben (To-Do)', show: feats.todo }
+            ];
 
-        cardTypes.forEach(c => {
-            if(!c.show) return;
-            const cardKey = c.id + activeMember;
+            cardTypes.forEach(c => {
+                if(!c.show) return;
+                const cardKey = c.id + activeMember;
 
-            if(collapsedCards[cardKey]) {
-                const mini = document.createElement('div'); mini.className = "card-mini-floating"; mini.innerHTML = `<span>${c.title}</span> <b>+</b>`; mini.onclick = () => { collapsedCards[cardKey] = false; renderAll(); };
-                dock.appendChild(mini); return;
-            }
+                if(collapsedCards[cardKey] && dock) {
+                    const mini = document.createElement('div'); mini.className = "card-mini-floating"; mini.innerHTML = `<span>${c.title}</span> <b>+</b>`; mini.onclick = () => { collapsedCards[cardKey] = false; renderAll(); };
+                    dock.appendChild(mini); return;
+                }
 
-            const card = document.createElement('div');
-            card.className = "card"; card.setAttribute('draggable', 'true'); card.setAttribute('data-id', c.id);
-            if(c.id === 'editor') card.style.height = "520px";
-            
-            let html = `
-                <div class="card-header"><span>☰ ${c.title}</span><button class="btn-mini" onclick="collapsedCards('${cardKey}')">➖</button></div>
-                <div class="card-body">`;
+                const card = document.createElement('div');
+                card.className = "card"; card.setAttribute('draggable', 'true'); card.setAttribute('data-id', c.id);
+                if(c.id === 'editor') card.style.height = "520px";
+                
+                let html = `
+                    <div class="card-header"><span>☰ ${c.title}</span><button class="btn-mini" onclick="collapseCardAction('${cardKey}')">➖</button></div>
+                    <div class="card-body">`;
 
-            if(c.id === 'cal') {
-                html += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <button class="btn-skip-mini" onclick="changeMonth(-1)">◀</button><strong id="cal-title-lbl">Monat</strong><button class="btn-skip-mini" onclick="changeMonth(1)">▶</button>
-                    </div><div class="cal-grid" id="inner-cal-grid"></div><div class="mobile-cal-list" id="inner-cal-list"></div>`;
-            } else if(c.id === 'editor') {
-                html += `
-                    <div class="editor-container">
-                        <div class="editor-sidebar" id="editor-docs-list"></div>
-                        <div class="editor-main">
-                            <div class="input-group" style="margin-bottom:5px;"><input type="text" id="new-doc-title" placeholder="Neues Dokument..."><button class="btn-main active" onclick="addDocument()">+</button></div>
-                            <textarea class="editor-textarea" id="editor-field" placeholder="Schreib hier etwas..." oninput="autoSaveText()"></textarea>
-                        </div>
-                    </div>`;
-            } else {
-                let placeholderText = "Hinzufügen...";
-                if(c.id === 'project') placeholderText = "Neuer Meilenstein...";
-                if(c.id === 'ideas') placeholderText = "Kreative Idee...";
-                html += `<div class="input-group"><input type="text" id="input-${c.id}" placeholder="${placeholderText}"><button class="btn-main active" onclick="addItem('${c.id}')">+</button></div><ul class="list-container" id="list-${c.id}"></ul>`;
-            }
+                if(c.id === 'cal') {
+                    html += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <button class="btn-skip-mini" onclick="changeMonth(-1)">◀</button><strong id="cal-title-lbl">Monat</strong><button class="btn-skip-mini" onclick="changeMonth(1)">▶</button>
+                        </div><div class="cal-grid" id="inner-cal-grid"></div><div class="mobile-cal-list" id="inner-cal-list"></div>`;
+                } else if(c.id === 'editor') {
+                    html += `
+                        <div class="editor-container">
+                            <div class="editor-sidebar" id="editor-docs-list"></div>
+                            <div class="editor-main">
+                                <div class="input-group" style="margin-bottom:5px;"><input type="text" id="new-doc-title" placeholder="Neues Dokument..."><button class="btn-main active" onclick="addDocument()">+</button></div>
+                                <textarea class="editor-textarea" id="editor-field" placeholder="Schreib hier etwas..." oninput="autoSaveText()"></textarea>
+                            </div>
+                        </div>`;
+                } else {
+                    let placeholderText = "Hinzufügen...";
+                    if(c.id === 'project') placeholderText = "Neuer Meilenstein...";
+                    if(c.id === 'ideas') placeholderText = "Kreative Idee...";
+                    html += `<div class="input-group"><input type="text" id="input-${c.id}" placeholder="${placeholderText}"><button class="btn-main active" onclick="addItem('${c.id}')">+</button></div><ul class="list-container" id="list-${c.id}"></ul>`;
+                }
 
-            html += `</div>`;
-            card.innerHTML = html;
-            grid.appendChild(card);
+                html += `</div>`;
+                card.innerHTML = html;
+                grid.appendChild(card);
 
-            if(c.id === 'cal') { renderInnerCalendar(); } 
-            else if(c.id === 'editor') { renderEditorWorkspace(); }
-            else { populateList(c.id); }
-        });
+                if(c.id === 'cal') { renderInnerCalendar(); } 
+                else if(c.id === 'editor') { renderEditorWorkspace(); }
+                else { populateList(c.id); }
+            });
 
-        setupDragAndDrop(grid);
+            setupDragAndDrop(grid);
+        } catch(e) {
+            console.error("Fehler beim Zeichnen des Dashboards:", e);
+        }
     }
 
-    function collapsedCards(key) { collapsedCards[key] = true; renderAll(); }
+    function collapseCardAction(key) { collapsedCards[key] = true; renderAll(); }
 
     function setupDragAndDrop(grid) {
         const cards = grid.querySelectorAll('.card');
@@ -479,6 +505,7 @@
 
     function renderEditorWorkspace() {
         const person = familyData[activeMember];
+        if (!person || !person.docs) return;
         const sidebar = document.getElementById('editor-docs-list');
         const textarea = document.getElementById('editor-field');
         if(!sidebar || !textarea) return;
@@ -487,7 +514,7 @@
         person.docs.forEach((doc, idx) => {
             const btn = document.createElement('button');
             btn.className = `doc-tab ${idx === activeDocIndex ? 'active' : ''}`;
-            btn.innerHTML = `<span>📄 ${doc.title}</span><span style="color:#e74c3c; font-size:0.75rem;" onclick="event.stopPropagation(); deleteDocument(${idx})">🗑️</span>`;
+            btn.innerHTML = `<span>📄 ${doc.title || 'Unbenannt'}</span><span style="color:#e74c3c; font-size:0.75rem;" onclick="event.stopPropagation(); deleteDocument(${idx})">🗑️</span>`;
             btn.onclick = () => { activeDocIndex = idx; renderEditorWorkspace(); };
             sidebar.appendChild(btn);
         });
@@ -504,6 +531,7 @@
     function addDocument() {
         const inp = document.getElementById('new-doc-title'); const title = inp.value.trim(); if(!title) return;
         const person = familyData[activeMember];
+        if(!person.docs) person.docs = [];
         person.docs.push({title: title, text: ''});
         activeDocIndex = person.docs.length - 1; inp.value = ""; syncData();
     }
@@ -518,7 +546,7 @@
 
     function autoSaveText() {
         const textarea = document.getElementById('editor-field');
-        if(!textarea || !familyData[activeMember].docs[activeDocIndex]) return;
+        if(!textarea || !familyData[activeMember] || !familyData[activeMember].docs || !familyData[activeMember].docs[activeDocIndex]) return;
         familyData[activeMember].docs[activeDocIndex].text = textarea.value;
         if(window.saveTimeout) clearTimeout(window.saveTimeout);
         window.saveTimeout = setTimeout(() => { syncData(); }, 1000);
@@ -526,7 +554,10 @@
 
     function populateList(type) {
         const ul = document.getElementById(`list-${type}`); if(!ul) return;
+        ul.innerHTML = "";
         const person = familyData[activeMember];
+        if(!person) return;
+        
         if(type === 'todo') {
             const arr = person.todos || [];
             arr.forEach((item, i) => {
@@ -549,6 +580,7 @@
         if(type === 'project') { if(!person.projects) person.projects = []; person.projects.push({name: val, notes: []}); }
         if(type === 'ideas') { if(!person.ideas) person.ideas = []; person.ideas.push({name: val, notes: []}); }
         syncData();
+        document.getElementById(`input-${type}`).value = "";
     }
 
     function toggleTodoCheck(i) { familyData[activeMember].todos[i].completed = !familyData[activeMember].todos[i].completed; syncData(); }
@@ -575,9 +607,10 @@
 
     function changeMonth(dir) { monthOffset += dir; renderAll(); }
     function renderInnerCalendar() {
-        const grid = document.getElementById('inner-cal-grid'); const list = document.getElementById('inner-cal-list'); if(!grid) return; grid.innerHTML = ""; list.innerHTML = "";
+        const grid = document.getElementById('inner-cal-grid'); const list = document.getElementById('inner-cal-list'); if(!grid) return; grid.innerHTML = ""; if(list) list.innerHTML = "";
         const now = new Date(); const firstDay = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1); const lastDay = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0);
-        document.getElementById('cal-title-lbl').textContent = firstDay.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+        const titleLbl = document.getElementById('cal-title-lbl');
+        if(titleLbl) titleLbl.textContent = firstDay.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
         let startShift = (firstDay.getDay() + 6) % 7;
         for(let i=0; i<startShift; i++) grid.innerHTML += `<div class="cal-cell" style="opacity:0.1;"></div>`;
         const personEvents = familyData[activeMember].events || [];
@@ -597,10 +630,10 @@
         syncData(); document.getElementById('event-modal').style.display = 'none';
     }
 
-    function toggleSidebar() { const side = document.getElementById('app-sidebar'); side.classList.toggle('collapsed'); document.getElementById('side-arrow').textContent = side.classList.contains('collapsed') ? "▶" : "◀"; }
-    function quickToggleView() { config.view = config.view === 'normal' ? 'beta' : 'normal'; document.getElementById('set-view').value = config.view; applyView(); }
-    function applyView() { config.view = document.getElementById('set-view').value; document.getElementById('view-normal').style.display = config.view === 'normal' ? 'block' : 'none'; document.getElementById('view-beta').style.display = config.view === 'beta' ? 'flex' : 'none'; document.getElementById('quick-toggle-text').textContent = config.view === 'normal' ? 'Wechsle zu Beta 1.12' : 'Wechsle zu Version 1.1'; renderAll(); }
-    function applyGradient() { const grad = document.getElementById('set-color').value; config.gradient = grad; document.getElementById('app-body').style.setProperty('--header-gradient', grad); const extractedColor = grad.includes('f1c40f') ? '#e67e22' : (grad.includes('00f2fe') ? '#00f2fe' : '#8e44ad'); document.getElementById('app-body').style.setProperty('--primary-color', extractedColor); renderAll(); }
+    function toggleSidebar() { const side = document.getElementById('app-sidebar'); if(!side) return; side.classList.toggle('collapsed'); const arrow = document.getElementById('side-arrow'); if(arrow) arrow.textContent = side.classList.contains('collapsed') ? "▶" : "◀"; }
+    function quickToggleView() { config.view = config.view === 'normal' ? 'beta' : 'normal'; const setV = document.getElementById('set-view'); if(setV) setV.value = config.view; applyView(); }
+    function applyView() { const setV = document.getElementById('set-view'); if(setV) config.view = setV.value; const vn = document.getElementById('view-normal'); if(vn) vn.style.display = config.view === 'normal' ? 'block' : 'none'; const vb = document.getElementById('view-beta'); if(vb) vb.style.display = config.view === 'beta' ? 'flex' : 'none'; const qxt = document.getElementById('quick-toggle-text'); if(qxt) qxt.textContent = config.view === 'normal' ? 'Wechsle zu Beta 1.12' : 'Wechsle zu Version 1.1'; renderAll(); }
+    function applyGradient() { const setC = document.getElementById('set-color'); if(!setC) return; const grad = setC.value; config.gradient = grad; document.getElementById('app-body').style.setProperty('--header-gradient', grad); const extractedColor = grad.includes('f1c40f') ? '#e67e22' : (grad.includes('00f2fe') ? '#00f2fe' : '#8e44ad'); document.getElementById('app-body').style.setProperty('--primary-color', extractedColor); renderAll(); }
     function toggleDarkMode() { config.darkMode = !config.darkMode; document.getElementById('app-body').classList.toggle('dark-mode', config.darkMode); }
     function flipHeader() { document.querySelectorAll('.header-flip-element').forEach(el => el.classList.add('flipped')); setTimeout(() => document.querySelectorAll('.header-flip-element').forEach(el => el.classList.remove('flipped')), 4000); }
 </script>
