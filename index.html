@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Familien-Zentrum v1.12 Ultra</title>
+    <title>Familien-Zentrum v1.13</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
@@ -40,7 +40,7 @@
         .back { transform: rotateY(180deg); background: #2c3e50; }
         @keyframes gradShift { 0% {background-position: 0% 50%} 50% {background-position: 100% 50%} 100% {background-position: 0% 50%} }
 
-        /* --- BUTTONS (FLACH, KEIN VERLAUF) --- */
+        /* --- BUTTONS --- */
         .btn-main { padding: 12px 20px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; background: #e0e0e0; color: #333; font-size: 1rem; }
         .btn-main.active { background-color: var(--primary-color); color: white; }
         .dark-mode .btn-main { background: #333; color: #e0e0e0; }
@@ -48,7 +48,7 @@
 
         /* --- LAYOUTS --- */
         .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; width: 100%; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; width: 100%; position: relative; }
 
         /* Beta Sidebar Layout */
         .beta-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
@@ -58,16 +58,15 @@
         .sidebar.collapsed .sidebar-toggle { display: flex !important; right: -15px; }
         .main-view { flex: 1; overflow-y: auto; padding: 30px; }
         
-        /* --- CARDS (ZUKLAPP-LOGIK ALS BUTTON) --- */
+        /* --- CARDS & MINI-BUTTON LOGIK --- */
         .card { background: var(--card-bg); border-radius: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; margin-bottom: 20px; border-top: 5px solid var(--primary-color); height: 560px; }
         .card-header { padding: 15px 20px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .card-body { padding: 20px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .controls { display: flex; gap: 8px; }
         .btn-mini { border: none; background: rgba(0,0,0,0.05); cursor: pointer; padding: 6px; border-radius: 6px; font-size: 0.8rem; color: var(--text-color); }
         
-        /* Mini-Button für komplett eingeklappte Karte */
-        .card-collapsed-placeholder { background: var(--card-bg); border: 2px solid var(--primary-color); border-radius: 12px; padding: 12px 20px; cursor: pointer; font-weight: bold; text-align: center; box-shadow: var(--shadow); margin-bottom: 15px; }
-        .card-collapsed-placeholder:hover { background: rgba(0,0,0,0.02); }
+        /* Ganz kleine Schaltfläche für eingeklappte Karte */
+        .card-mini-trigger { width: 45px; height: 45px; border-radius: 50%; background: var(--primary-color); color: white; display: flex; justify-content: center; align-items: center; font-size: 1.4rem; font-weight: bold; cursor: pointer; box-shadow: var(--shadow); border: 2px solid var(--card-bg); margin-bottom: 15px; title: "Maximieren"; }
+        .card-mini-trigger:hover { transform: scale(1.1); }
 
         /* --- INPUT GROUPS & LISTS --- */
         .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
@@ -78,7 +77,7 @@
         .clickable-text { cursor: pointer; flex: 1; }
         .btn-delete { background: none; border: none; color: #e74c3c; cursor: pointer; padding: 2px 6px; font-weight: bold; }
 
-        /* --- BIG CALENDAR (BETA 1.12 & NORMAL ENHANCED) --- */
+        /* --- BIG CALENDAR --- */
         .big-calendar { background: var(--card-bg); border-radius: 24px; padding: 20px; box-shadow: var(--shadow); width: 100%; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 15px; }
         .cal-cell { background: rgba(0,0,0,0.02); min-height: 95px; padding: 8px; cursor: pointer; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 4px; }
@@ -186,11 +185,20 @@
         <label style="font-weight:bold; font-size:0.9rem;">Datum:</label>
         <input type="date" id="quick-event-date" style="font-size:1rem; padding:8px;">
         <input type="text" id="quick-event-name" placeholder="Name des Termins...">
-        <label style="font-weight:bold; font-size:0.9rem;">Farbe:</label>
+        <label style="font-weight:bold; font-size:0.9rem;">Farbe auswählen:</label>
         <select id="quick-event-color" class="btn-main" style="width:100%; margin-top:5px; background:var(--card-bg); text-align:left;">
-            <option value="#e67e22">Orange</option><option value="#3498db">Blau</option>
-            <option value="#2ecc71">Grün</option><option value="#9b59b6">Violett</option>
-            <option value="#e74c3c">Rot</option>
+            <option value="#3498db" style="color:#3498db; font-weight:bold;">Standard Blau</option>
+            <option value="#e67e22" style="color:#e67e22; font-weight:bold;">Kürbis Orange</option>
+            <option value="#2ecc71" style="color:#2ecc71; font-weight:bold;">Smaragd Grün</option>
+            <option value="#e74c3c" style="color:#e74c3c; font-weight:bold;">Alarmsignal Rot</option>
+            <option value="#9b59b6" style="color:#9b59b6; font-weight:bold;">Amethyst Violett</option>
+            <option value="#1abc9c" style="color:#1abc9c; font-weight:bold;">Türkis See</option>
+            <option value="#f1c40f" style="color:#f1c40f; font-weight:bold;">Sonnengelb</option>
+            <option value="#fd79a8" style="color:#fd79a8; font-weight:bold;">Zartrosa / Pink</option>
+            <option value="#2ed573" style="color:#2ed573; font-weight:bold;">Limette</option>
+            <option value="#74b9ff" style="color:#74b9ff; font-weight:bold;">Pastellblau</option>
+            <option value="#6c5ce7" style="color:#6c5ce7; font-weight:bold;">Lavendel</option>
+            <option value="#7f8c8d" style="color:#7f8c8d; font-weight:bold;">Schiefergrau</option>
         </select>
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button class="btn-main active" style="flex:1;" onclick="saveQuickEvent()">Eintragen</button>
@@ -240,7 +248,7 @@
 </div>
 
 <script>
-    // --- SETUP & FIREBASE ---
+    // --- VARIABLES & SETUP ---
     let GEHEIMER_PIN = "1234";
     let activeMember = "Lukas";
     let config = { view: 'normal', gradient: 'linear-gradient(135deg, #8e44ad, #3498db, #2ecc71)', darkMode: false };
@@ -249,7 +257,7 @@
     let collapsedCards = {}; 
     let monthOffset = 0;
     let weekOffset = 0;
-    let betaCalScope = "month"; // "month" oder "week"
+    let betaCalScope = "month";
     let showExpandedNormalCal = false;
     let currentWeekDates = [];
     let selectedDayIndex = null;
@@ -303,8 +311,8 @@
 
     function syncData() { database.ref('familyZentrumData').set(familyData); }
     function toggleSidebar() { const side = document.getElementById('app-sidebar'); side.classList.toggle('collapsed'); document.getElementById('side-arrow').textContent = side.classList.contains('collapsed') ? "▶" : "◀"; }
-
     function switchMember(name) { activeMember = name; selectedDayIndex = null; renderNavButtons(); renderAll(); }
+
     function renderNavButtons() {
         const list = ["Lukas", "Kathrin", "Marlene", "Anna", "Robert", "Familie"];
         ["person-nav-normal", "person-nav-beta"].forEach(id => {
@@ -315,7 +323,7 @@
         });
     }
 
-    // --- HAUPT RENDER PIPELINE ---
+    // --- PIPELINE OVERVIEW ---
     function renderAll() {
         renderNavButtons();
         const isBeta = config.view === 'beta';
@@ -323,14 +331,13 @@
         document.getElementById('dashboard-normal').innerHTML = "";
         document.getElementById('dashboard-beta').innerHTML = "";
         
-        // Kalender Steuerungen
+        // Dynamic Calendar Load
         const bigCalBeta = document.getElementById('family-calendar-beta');
         if(activeMember === 'Familie' && isBeta) { bigCalBeta.style.display = 'block'; renderBigCalendar('cal-grid-body', 'cal-month-name', betaCalScope); } else { bigCalBeta.style.display = 'none'; }
         
         const bigCalNormal = document.getElementById('expanded-calendar-normal');
         if(activeMember === 'Familie' && !isBeta && showExpandedNormalCal) { bigCalNormal.style.display = 'block'; renderBigCalendar('cal-grid-body-normal', 'cal-month-name-normal', 'month'); } else { bigCalNormal.style.display = 'none'; }
 
-        // Module
         const structures = [
             { id: 'topics', title: activeMember === 'Familie' ? 'Kalender Termine' : 'Lernthemen', show: activeMember !== 'Anna' && activeMember !== 'Robert' },
             { id: 'todo-open', title: 'To-Do: Offen', show: true },
@@ -341,13 +348,14 @@
             if(!s.show) return;
             const cardKey = s.id + activeMember;
             
-            // Wenn eingeklappt: Erstelle nur einen kompakten Platzhalter-Button!
+            // ULTRA-MINIMALER RUNDER TRIGER-BUTTON WENN GEKAPPT
             if(collapsedCards[cardKey]) {
-                const miniBtn = document.createElement('div');
-                miniBtn.className = "card-collapsed-placeholder";
-                miniBtn.textContent = `➕ [Ausklappen] ${s.title}`;
-                miniBtn.onclick = () => toggleCardBody(s.id);
-                grid.appendChild(miniBtn);
+                const miniTrigger = document.createElement('div');
+                miniTrigger.className = "card-mini-trigger";
+                miniTrigger.textContent = "+";
+                miniTrigger.title = `Ausklappen: ${s.title}`;
+                miniTrigger.onclick = () => toggleCardBody(s.id);
+                grid.appendChild(miniTrigger);
                 return;
             }
             
@@ -383,6 +391,12 @@
                         <div class="input-group" style="flex-direction:column; gap:5px;">
                             <input type="text" id="event-input" placeholder="Termin-Name...">
                             <input type="date" id="event-start">
+                            <label style="font-size:0.8rem; font-weight:bold;">Farbe:</label>
+                            <select id="event-color-normal" class="btn-main" style="padding:5px; font-size:0.9rem;">
+                                <option value="#3498db">Blau</option><option value="#e67e22">Orange</option>
+                                <option value="#2ecc71">Grün</option><option value="#e74c3c">Rot</option>
+                                <option value="#9b59b6">Violett</option><option value="#fd79a8">Pink</option>
+                            </select>
                             <button class="btn-main active" onclick="addEvent()">Termin eintragen</button>
                         </div>`;
                 } else { bodyHtml += `<div class="input-group"><input type="text" id="topic-input" placeholder="Neues Thema..."><button class="btn-main active" onclick="addTopic()">+</button></div>`; }
@@ -405,7 +419,7 @@
         renderBigCalendar('cal-grid-body', 'cal-month-name', scope);
     }
 
-    // --- KALENDER SYSTEM (FLEXIBEL FÜR MONAT & WOCHE) ---
+    // --- FLEXIBLE CALENDAR BUILDER ---
     function renderBigCalendar(targetGridId, targetTitleId, scope) {
         const grid = document.getElementById(targetGridId); grid.innerHTML = "";
         const now = new Date();
@@ -423,11 +437,9 @@
                 buildCalCell(grid, cellDate, d, now);
             }
         } else if (scope === "week") {
-            // Wochen-Fokus für Beta
             const currentDay = now.getDay();
             const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
             const monday = new Date(now); monday.setDate(now.getDate() + distanceToMonday + (monthOffset * 7));
-            
             const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
             document.getElementById(targetTitleId).textContent = `KW ${getWeekNumber(monday)} (${monday.getDate()}.${monday.getMonth()+1}. - ${sunday.getDate()}.${sunday.getMonth()+1}.)`;
 
@@ -457,7 +469,7 @@
 
     function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var s = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil((((d - s) / 86400000) + 1)/7); }
 
-    // --- RESTLICHE LOGIKEN BEIBEHALTEN ---
+    // --- RENDERING LIST ITEMS & SYNCS ---
     function fillLists() {
         const data = familyData[activeMember]; const leftList = document.getElementById('list-topics');
         if(leftList) {
@@ -525,7 +537,12 @@
     function renderNotes() { const list = document.getElementById('modal-notes-list'); list.innerHTML = ''; let notes = activeMember === 'Familie' ? familyData.Familie.events[activeItemIndex].notes || [] : familyData[activeMember].topics[activeItemIndex].notes || []; if(notes.length === 0) { list.innerHTML = '<li>Keine Notizen</li>'; return; } notes.forEach((n, ni) => { list.innerHTML += `<li style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>• ${n}</span><button class="btn-delete" onclick="deleteNote(${ni})">X</button></li>`; }); }
     function addNote() { const input = document.getElementById('note-input'); if(input.value.trim()) { let item = activeMember === 'Familie' ? familyData.Familie.events[activeItemIndex] : familyData[activeMember].topics[activeItemIndex]; if(!item.notes) item.notes = []; item.notes.push(input.value.trim()); input.value=''; syncData(); renderNotes(); } }
     function deleteNote(ni) { if(activeMember === 'Familie') { familyData.Familie.events[activeItemIndex].notes.splice(ni,1); } else { familyData[activeMember].topics[activeItemIndex].notes.splice(ni,1); } syncData(); renderNotes(); }
-    function addEvent() { const name = document.getElementById('event-input'); const start = document.getElementById('event-start'); if(name.value.trim() && start.value) { familyData.Familie.events.push({ name: name.value.trim(), start: start.value, end: start.value, color: '#e67e22', notes: [] }); name.value=''; start.value=''; syncData(); } }
+    
+    function addEvent() { 
+        const name = document.getElementById('event-input'); const start = document.getElementById('event-start');
+        const color = document.getElementById('event-color-normal').value;
+        if(name.value.trim() && start.value) { familyData.Familie.events.push({ name: name.value.trim(), start: start.value, end: start.value, color: color, notes: [] }); name.value=''; start.value=''; syncData(); } 
+    }
     function deleteEvent(i) { if(confirm("Termin löschen?")) { familyData.Familie.events.splice(i,1); selectedDayIndex = null; syncData(); } }
     function addTopic() { const input = document.getElementById('topic-input'); if(input.value.trim()) { familyData[activeMember].topics.push({name: input.value.trim(), notes: []}); input.value=''; syncData(); } }
     function deleteTopic(i) { if(confirm("Thema löschen?")) { familyData[activeMember].topics.splice(i,1); syncData(); } }
