@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Familien-Zentrum v1.1 / v1.12</title>
+    <title>Familien-Zentrum v1.12 Ultra</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
@@ -58,13 +58,16 @@
         .sidebar.collapsed .sidebar-toggle { display: flex !important; right: -15px; }
         .main-view { flex: 1; overflow-y: auto; padding: 30px; }
         
-        /* --- CARDS (VERSCHIEBBAR & ZUKLAPPBAR) --- */
+        /* --- CARDS (ZUKLAPP-LOGIK ALS BUTTON) --- */
         .card { background: var(--card-bg); border-radius: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; margin-bottom: 20px; border-top: 5px solid var(--primary-color); height: 560px; }
         .card-header { padding: 15px 20px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .card-body { padding: 20px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .card-body.collapsed { display: none; }
         .controls { display: flex; gap: 8px; }
         .btn-mini { border: none; background: rgba(0,0,0,0.05); cursor: pointer; padding: 6px; border-radius: 6px; font-size: 0.8rem; color: var(--text-color); }
+        
+        /* Mini-Button für komplett eingeklappte Karte */
+        .card-collapsed-placeholder { background: var(--card-bg); border: 2px solid var(--primary-color); border-radius: 12px; padding: 12px 20px; cursor: pointer; font-weight: bold; text-align: center; box-shadow: var(--shadow); margin-bottom: 15px; }
+        .card-collapsed-placeholder:hover { background: rgba(0,0,0,0.02); }
 
         /* --- INPUT GROUPS & LISTS --- */
         .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
@@ -75,7 +78,7 @@
         .clickable-text { cursor: pointer; flex: 1; }
         .btn-delete { background: none; border: none; color: #e74c3c; cursor: pointer; padding: 2px 6px; font-weight: bold; }
 
-        /* --- BIG CALENDAR (BETA 1.12) --- */
+        /* --- BIG CALENDAR (BETA 1.12 & NORMAL ENHANCED) --- */
         .big-calendar { background: var(--card-bg); border-radius: 24px; padding: 20px; box-shadow: var(--shadow); width: 100%; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 15px; }
         .cal-cell { background: rgba(0,0,0,0.02); min-height: 95px; padding: 8px; cursor: pointer; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 4px; }
@@ -125,6 +128,16 @@
 
         <div class="family-nav" id="person-nav-normal" style="margin-bottom:25px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;"></div>
         <h2 id="current-title-normal" style="text-align:center; margin-bottom:20px;">Dashboard</h2>
+        
+        <div id="expanded-calendar-normal" class="big-calendar" style="display:none; margin-bottom:30px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <button class="btn-main" onclick="changeMonth(-1)">◀</button>
+                <h2 id="cal-month-name-normal">Monat</h2>
+                <button class="btn-main" onclick="toggleExpandCalendarNormal()">Collapse ↩</button>
+            </div>
+            <div class="cal-grid" id="cal-grid-body-normal"></div>
+        </div>
+
         <div id="dashboard-normal" class="dashboard-grid"></div>
     </div>
 
@@ -147,12 +160,16 @@
             </div>
             
             <div id="family-calendar-beta" class="big-calendar" style="display:none; margin-bottom:30px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <button class="btn-main" onclick="changeMonth(-1)">◀</button>
-                    <h2 id="cal-month-name">Monat</h2>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                     <div>
-                        <button class="btn-main" onclick="jumpToToday()" style="margin-right:5px;">Heute</button>
+                        <button class="btn-main" onclick="changeMonth(-1)">◀</button>
+                        <span id="cal-month-name" style="font-weight:bold; margin:0 10px; font-size:1.2rem;">Monat</span>
                         <button class="btn-main" onclick="changeMonth(1)">▶</button>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                        <button id="btn-view-month" class="btn-main active" onclick="setBetaCalScope('month')">Monat</button>
+                        <button id="btn-view-week" class="btn-main" onclick="setBetaCalScope('week')">Woche</button>
+                        <button class="btn-main" onclick="jumpToToday()">Heute</button>
                     </div>
                 </div>
                 <div class="cal-grid" id="cal-grid-body"></div>
@@ -166,10 +183,10 @@
 <div id="event-modal" class="login-overlay" style="display:none; background:rgba(0,0,0,0.6); z-index:4000;">
     <div class="login-box" style="text-align:left; max-width:450px;">
         <h3 style="margin-bottom:15px;">📅 Neuen Termin eintragen</h3>
-        <label style="font-weight:bold; font-size:0.9rem;">Ausgewähltes Datum:</label>
+        <label style="font-weight:bold; font-size:0.9rem;">Datum:</label>
         <input type="date" id="quick-event-date" style="font-size:1rem; padding:8px;">
-        <input type="text" id="quick-event-name" placeholder="Name des Termins (z.B. Fußball)">
-        <label style="font-weight:bold; font-size:0.9rem;">Farbe wählen:</label>
+        <input type="text" id="quick-event-name" placeholder="Name des Termins...">
+        <label style="font-weight:bold; font-size:0.9rem;">Farbe:</label>
         <select id="quick-event-color" class="btn-main" style="width:100%; margin-top:5px; background:var(--card-bg); text-align:left;">
             <option value="#e67e22">Orange</option><option value="#3498db">Blau</option>
             <option value="#2ecc71">Grün</option><option value="#9b59b6">Violett</option>
@@ -206,8 +223,8 @@
             <div style="background:rgba(0,0,0,0.03); padding:15px; border-radius:12px;">
                 <label style="font-weight:bold; color:#e74c3c;">🔑 Sicherheits-PIN ändern:</label>
                 <input type="password" id="pin-old" placeholder="Aktueller PIN">
-                <input type="password" id="pin-new1" placeholder="Neuer PIN (4 Stellen)" maxlength="4">
-                <input type="password" id="pin-new2" placeholder="Neuer PIN bestätigen" maxlength="4">
+                <input type="password" id="pin-new1" placeholder="Neuer PIN" maxlength="4">
+                <input type="password" id="pin-new2" placeholder="Bestätigen" maxlength="4">
                 <button class="btn-main active" style="width:100%; margin-top:5px;" onclick="updatePin()">PIN Speichern</button>
             </div>
         </div>
@@ -223,7 +240,7 @@
 </div>
 
 <script>
-    // --- DATEN & SETUP ---
+    // --- SETUP & FIREBASE ---
     let GEHEIMER_PIN = "1234";
     let activeMember = "Lukas";
     let config = { view: 'normal', gradient: 'linear-gradient(135deg, #8e44ad, #3498db, #2ecc71)', darkMode: false };
@@ -232,6 +249,8 @@
     let collapsedCards = {}; 
     let monthOffset = 0;
     let weekOffset = 0;
+    let betaCalScope = "month"; // "month" oder "week"
+    let showExpandedNormalCal = false;
     let currentWeekDates = [];
     let selectedDayIndex = null;
     let activeItemIndex = null;
@@ -253,9 +272,7 @@
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-content').style.display = 'block';
             initApp();
-        } else {
-            document.getElementById('pin-error').style.display = 'block';
-        }
+        } else { document.getElementById('pin-error').style.display = 'block'; }
     }
 
     function initApp() {
@@ -273,16 +290,11 @@
             }
             renderAll();
         });
-        
-        updateClock();
-        setInterval(updateClock, 1000);
-        applyGradient();
-        switchMember(activeMember);
+        updateClock(); setInterval(updateClock, 1000); applyGradient(); switchMember(activeMember);
     }
 
     function updateClock() {
-        const now = new Date();
-        const time = now.toLocaleTimeString('de-DE');
+        const now = new Date(); const time = now.toLocaleTimeString('de-DE');
         document.getElementById('clock').textContent = time;
         document.getElementById('beta-clock-small').textContent = time.substring(0,5);
         document.getElementById('date').textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -290,55 +302,35 @@
     }
 
     function syncData() { database.ref('familyZentrumData').set(familyData); }
+    function toggleSidebar() { const side = document.getElementById('app-sidebar'); side.classList.toggle('collapsed'); document.getElementById('side-arrow').textContent = side.classList.contains('collapsed') ? "▶" : "◀"; }
 
-    // --- SEITENLEISTE EINKLAPPEN ---
-    function toggleSidebar() {
-        const side = document.getElementById('app-sidebar');
-        const arrow = document.getElementById('side-arrow');
-        side.classList.toggle('collapsed');
-        arrow.textContent = side.classList.contains('collapsed') ? "▶" : "◀";
-    }
-
-    // --- NAVIGATOR ---
-    function switchMember(name) {
-        activeMember = name;
-        selectedDayIndex = null;
-        document.getElementById('beta-title').textContent = name === 'Familie' ? "Gemeinsamer Bereich" : `Dashboard von ${name}`;
-        document.getElementById('current-title-normal').textContent = name === 'Familie' ? "Gemeinsamer Bereich" : `Dashboard von ${name}`;
-        
-        renderNavButtons();
-        renderAll();
-    }
-
+    function switchMember(name) { activeMember = name; selectedDayIndex = null; renderNavButtons(); renderAll(); }
     function renderNavButtons() {
         const list = ["Lukas", "Kathrin", "Marlene", "Anna", "Robert", "Familie"];
         ["person-nav-normal", "person-nav-beta"].forEach(id => {
-            const cont = document.getElementById(id); if(!cont) return;
-            cont.innerHTML = "";
+            const cont = document.getElementById(id); if(!cont) return; cont.innerHTML = "";
             list.forEach(m => {
-                const b = document.createElement('button');
-                b.className = `btn-main ${m === activeMember ? 'active' : ''}`;
-                b.textContent = m;
-                b.onclick = () => switchMember(m);
-                cont.appendChild(b);
+                const b = document.createElement('button'); b.className = `btn-main ${m === activeMember ? 'active' : ''}`; b.textContent = m; b.onclick = () => switchMember(m); cont.appendChild(b);
             });
         });
     }
 
-    // --- HAUPT-RENDERER ---
+    // --- HAUPT RENDER PIPELINE ---
     function renderAll() {
         renderNavButtons();
-        
         const isBeta = config.view === 'beta';
         const grid = document.getElementById(isBeta ? 'dashboard-beta' : 'dashboard-normal');
         document.getElementById('dashboard-normal').innerHTML = "";
         document.getElementById('dashboard-beta').innerHTML = "";
         
-        // Beta-Kalender steuern
-        const bigCal = document.getElementById('family-calendar-beta');
-        if(activeMember === 'Familie' && isBeta) { bigCal.style.display = 'block'; renderBigCalendar(); } else { bigCal.style.display = 'none'; }
+        // Kalender Steuerungen
+        const bigCalBeta = document.getElementById('family-calendar-beta');
+        if(activeMember === 'Familie' && isBeta) { bigCalBeta.style.display = 'block'; renderBigCalendar('cal-grid-body', 'cal-month-name', betaCalScope); } else { bigCalBeta.style.display = 'none'; }
+        
+        const bigCalNormal = document.getElementById('expanded-calendar-normal');
+        if(activeMember === 'Familie' && !isBeta && showExpandedNormalCal) { bigCalNormal.style.display = 'block'; renderBigCalendar('cal-grid-body-normal', 'cal-month-name-normal', 'month'); } else { bigCalNormal.style.display = 'none'; }
 
-        // Struktur-Karten bauen
+        // Module
         const structures = [
             { id: 'topics', title: activeMember === 'Familie' ? 'Kalender Termine' : 'Lernthemen', show: activeMember !== 'Anna' && activeMember !== 'Robert' },
             { id: 'todo-open', title: 'To-Do: Offen', show: true },
@@ -347,20 +339,27 @@
 
         structures.forEach(s => {
             if(!s.show) return;
-            const isCol = collapsedCards[s.id + activeMember] || false;
+            const cardKey = s.id + activeMember;
+            
+            // Wenn eingeklappt: Erstelle nur einen kompakten Platzhalter-Button!
+            if(collapsedCards[cardKey]) {
+                const miniBtn = document.createElement('div');
+                miniBtn.className = "card-collapsed-placeholder";
+                miniBtn.textContent = `➕ [Ausklappen] ${s.title}`;
+                miniBtn.onclick = () => toggleCardBody(s.id);
+                grid.appendChild(miniBtn);
+                return;
+            }
             
             const card = document.createElement('div');
             card.className = "card";
-            
             let headerHtml = `
                 <div class="card-header">
                     <span style="font-weight:bold">${s.title}</span>
-                    <button class="btn-mini" onclick="toggleCardBody('${s.id}')">${isCol ? '➕ Ausklappen' : '➖ Zuklappen'}</button>
+                    <button class="btn-mini" onclick="toggleCardBody('${s.id}')">➖ Zuklappen</button>
                 </div>`;
-                
-            let bodyHtml = `<div class="card-body ${isCol ? 'collapsed' : ''}">`;
+            let bodyHtml = `<div class="card-body">`;
             
-            // Spezifischer Inhalt für den linken Block der Normalansicht
             if(s.id === 'topics' && !isBeta) {
                 if(activeMember === 'Familie') {
                     bodyHtml += `
@@ -377,67 +376,99 @@
                                 <button class="btn-main" style="padding:2px 8px;" onclick="changeWeek(1); event.stopPropagation();">▶</button>
                             </div>
                         </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <button class="btn-main" onclick="toggleExpandCalendarNormal()">🔍 Vergrößern (Monat)</button>
+                        </div>
                         <div class="day-preview-box" id="day-preview-container" style="display:none;"><div id="day-preview-text">Keine Termine</div></div>
                         <div class="input-group" style="flex-direction:column; gap:5px;">
                             <input type="text" id="event-input" placeholder="Termin-Name...">
                             <input type="date" id="event-start">
                             <button class="btn-main active" onclick="addEvent()">Termin eintragen</button>
-                        </div>
-                    `;
-                } else {
-                    bodyHtml += `
-                        <div class="input-group">
-                            <input type="text" id="topic-input" placeholder="Neues Thema...">
-                            <button class="btn-main active" onclick="addTopic()">+</button>
-                        </div>
-                    `;
-                }
-            } else if (s.id === 'todo-open') {
-                bodyHtml += `
-                    <div class="input-group">
-                        <input type="text" id="todo-input" placeholder="Aufgabe hinzufügen...">
-                        <button class="btn-main active" onclick="addTodo()">+</button>
-                    </div>
-                `;
-            }
+                        </div>`;
+                } else { bodyHtml += `<div class="input-group"><input type="text" id="topic-input" placeholder="Neues Thema..."><button class="btn-main active" onclick="addTopic()">+</button></div>`; }
+            } else if (s.id === 'todo-open') { bodyHtml += `<div class="input-group"><input type="text" id="todo-input" placeholder="Aufgabe..."><button class="btn-main active" onclick="addTodo()">+</button></div>`; }
 
             bodyHtml += `<ul class="list-container" id="list-${s.id}"></ul></div>`;
             card.innerHTML = headerHtml + bodyHtml;
             grid.appendChild(card);
         });
-
         fillLists();
     }
 
-    function toggleCardBody(id) {
-        const key = id + activeMember;
-        collapsedCards[key] = !collapsedCards[key];
-        renderAll();
+    function toggleCardBody(id) { collapsedCards[id + activeMember] = !collapsedCards[id + activeMember]; renderAll(); }
+    function toggleExpandCalendarNormal() { showExpandedNormalCal = !showExpandedNormalCal; renderAll(); }
+    
+    function setBetaCalScope(scope) {
+        betaCalScope = scope;
+        document.getElementById('btn-view-month').classList.toggle('active', scope === 'month');
+        document.getElementById('btn-view-week').classList.toggle('active', scope === 'week');
+        renderBigCalendar('cal-grid-body', 'cal-month-name', scope);
     }
 
-    // --- LISTENEINTRÄGE BEFÜLLEN ---
-    function fillLists() {
-        const data = familyData[activeMember];
+    // --- KALENDER SYSTEM (FLEXIBEL FÜR MONAT & WOCHE) ---
+    function renderBigCalendar(targetGridId, targetTitleId, scope) {
+        const grid = document.getElementById(targetGridId); grid.innerHTML = "";
+        const now = new Date();
         
-        // Links (Themen / Termine)
-        const leftList = document.getElementById('list-topics');
+        if (scope === "month") {
+            const firstDay = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0);
+            document.getElementById(targetTitleId).textContent = firstDay.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+            
+            let startShift = (firstDay.getDay() + 6) % 7;
+            for(let i=0; i<startShift; i++) grid.innerHTML += `<div class="cal-cell" style="opacity:0.2;"></div>`;
+
+            for(let d=1; d<=lastDay.getDate(); d++) {
+                const cellDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, d);
+                buildCalCell(grid, cellDate, d, now);
+            }
+        } else if (scope === "week") {
+            // Wochen-Fokus für Beta
+            const currentDay = now.getDay();
+            const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+            const monday = new Date(now); monday.setDate(now.getDate() + distanceToMonday + (monthOffset * 7));
+            
+            const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+            document.getElementById(targetTitleId).textContent = `KW ${getWeekNumber(monday)} (${monday.getDate()}.${monday.getMonth()+1}. - ${sunday.getDate()}.${sunday.getMonth()+1}.)`;
+
+            for(let i=0; i<7; i++) {
+                let cellDate = new Date(monday); cellDate.setDate(monday.getDate() + i);
+                const dayLabel = cellDate.toLocaleDateString('de-DE', {weekday: 'short'});
+                buildCalCell(grid, cellDate, `${dayLabel} ${cellDate.getDate()}`, now);
+            }
+        }
+    }
+
+    function buildCalCell(grid, cellDate, label, now) {
+        const dateStr = cellDate.toISOString().split('T')[0];
+        const isToday = cellDate.toDateString() === now.toDateString();
+        const cell = document.createElement('div');
+        cell.className = `cal-cell ${isToday ? 'today' : ''}`;
+        cell.innerHTML = `<div class="cal-num">${label}</div>`;
+        cell.onclick = () => openEventModal(dateStr);
+        
+        (familyData.Familie.events || []).forEach((e, idx) => {
+            if(dateStr === e.start) {
+                cell.innerHTML += `<div class="cal-event" style="background:${e.color || '#3498db'};" onclick="event.stopPropagation(); openNotes(${idx});">${e.name}</div>`;
+            }
+        });
+        grid.appendChild(cell);
+    }
+
+    function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var s = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil((((d - s) / 86400000) + 1)/7); }
+
+    // --- RESTLICHE LOGIKEN BEIBEHALTEN ---
+    function fillLists() {
+        const data = familyData[activeMember]; const leftList = document.getElementById('list-topics');
         if(leftList) {
             if(activeMember === 'Familie') {
                 updateNormalWeekBar();
-                (data.events || []).forEach((e, i) => {
-                    leftList.innerHTML += `<li class="list-item"><span class="clickable-text" onclick="openNotes(${i})"><strong>${e.name}</strong> <small>(${new Date(e.start).toLocaleDateString('de-DE')})</small></span><button class="btn-delete" onclick="deleteEvent(${i})">X</button></li>`;
-                });
+                (data.events || []).forEach((e, i) => { leftList.innerHTML += `<li class="list-item"><span class="clickable-text" onclick="openNotes(${i})"><strong>${e.name}</strong> <small>(${new Date(e.start).toLocaleDateString('de-DE')})</small></span><button class="btn-delete" onclick="deleteEvent(${i})">X</button></li>`; });
             } else {
-                (data.topics || []).forEach((t, i) => {
-                    leftList.innerHTML += `<li class="list-item"><span class="clickable-text" onclick="openNotes(${i})">${t.name} <small>(${t.notes?t.notes.length:0} Infos)</small></span><button class="btn-delete" onclick="deleteTopic(${i})">X</button></li>`;
-                });
+                (data.topics || []).forEach((t, i) => { leftList.innerHTML += `<li class="list-item"><span class="clickable-text" onclick="openNotes(${i})">${t.name} <small>(${t.notes?t.notes.length:0} Infos)</small></span><button class="btn-delete" onclick="deleteTopic(${i})">X</button></li>`; });
             }
         }
-
-        // Aufgaben (Offen / Erledigt)
-        const oList = document.getElementById('list-todo-open');
-        const dList = document.getElementById('list-todo-done');
-        
+        const oList = document.getElementById('list-todo-open'); const dList = document.getElementById('list-todo-done');
         if(oList && dList) {
             (data.todos || []).forEach((todo, i) => {
                 const html = `<li class="list-item"><span style="display:flex; gap:10px; align-items:center;"><input type="checkbox" ${todo.completed?'checked':''} onchange="toggleTodo(${i})"><span>${todo.title}</span></span><button class="btn-delete" onclick="deleteTodo(${i})">X</button></li>`;
@@ -446,78 +477,22 @@
         }
     }
 
-    // --- GOOGLE-KALENDER MODUS (BETA) ---
-    function renderBigCalendar() {
-        const grid = document.getElementById('cal-grid-body'); grid.innerHTML = "";
-        const now = new Date();
-        const firstDay = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
-        const lastDay = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0);
-        
-        document.getElementById('cal-month-name').textContent = firstDay.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
-        
-        let startShift = (firstDay.getDay() + 6) % 7;
-        for(let i=0; i<startShift; i++) grid.innerHTML += `<div class="cal-cell" style="opacity:0.3;"></div>`;
-
-        for(let d=1; d<=lastDay.getDate(); d++) {
-            const cellDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, d);
-            const dateStr = cellDate.toISOString().split('T')[0];
-            const isToday = cellDate.toDateString() === now.toDateString();
-            
-            const cell = document.createElement('div');
-            cell.className = `cal-cell ${isToday ? 'today' : ''}`;
-            cell.innerHTML = `<div class="cal-num">${d}</div>`;
-            cell.onclick = () => openEventModal(dateStr);
-            
-            (familyData.Familie.events || []).forEach((e, idx) => {
-                if(dateStr === e.start) {
-                    cell.innerHTML += `<div class="cal-event" style="background:${e.color || '#3498db'};" onclick="event.stopPropagation(); openNotes(${idx});">${e.name}</div>`;
-                }
-            });
-            grid.appendChild(cell);
-        }
-    }
-
-    function openEventModal(dateStr) {
-        document.getElementById('quick-event-date').value = dateStr;
-        document.getElementById('quick-event-name').value = "";
-        document.getElementById('event-modal').style.display = 'flex';
-    }
+    function openEventModal(dateStr) { document.getElementById('quick-event-date').value = dateStr; document.getElementById('quick-event-name').value = ""; document.getElementById('event-modal').style.display = 'flex'; }
     function closeEventModal() { document.getElementById('event-modal').style.display = 'none'; }
     function saveQuickEvent() {
-        const name = document.getElementById('quick-event-name').value;
-        const date = document.getElementById('quick-event-date').value;
-        const color = document.getElementById('quick-event-color').value;
-        if(name.trim() && date) {
-            familyData.Familie.events.push({ name: name.trim(), start: date, end: date, color: color, notes: [] });
-            syncData(); closeEventModal();
-        }
+        const name = document.getElementById('quick-event-name').value; const date = document.getElementById('quick-event-date').value; const color = document.getElementById('quick-event-color').value;
+        if(name.trim() && date) { familyData.Familie.events.push({ name: name.trim(), start: date, end: date, color: color, notes: [] }); syncData(); closeEventModal(); }
     }
 
-    function changeMonth(dir) { monthOffset += dir; renderBigCalendar(); }
-    function jumpToToday() { monthOffset = 0; renderBigCalendar(); }
+    function changeMonth(dir) { monthOffset += dir; renderAll(); }
+    function jumpToToday() { monthOffset = 0; renderAll(); }
 
-    // --- WOCHENLEISTE NORMAL-ANSICHT ---
     function updateNormalWeekBar() {
-        const now = new Date();
-        const currentDay = now.getDay(); 
-        const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay; 
-        const monday = new Date(now); monday.setDate(now.getDate() + distanceToMonday + (weekOffset * 7));
-
-        currentWeekDates = [];
+        const now = new Date(); const currentDay = now.getDay(); const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay; const monday = new Date(now); monday.setDate(now.getDate() + distanceToMonday + (weekOffset * 7));
+        currentWeekDates = []; for(let i = 0; i < 7; i++) { let d = new Date(monday); d.setDate(monday.getDate() + i); currentWeekDates.push({ dayNum: d.getDate(), fullDateStr: d.toISOString().split('T')[0] }); }
         for(let i = 0; i < 7; i++) {
-            let d = new Date(monday); d.setDate(monday.getDate() + i);
-            currentWeekDates.push({ dayNum: d.getDate(), fullDateStr: d.toISOString().split('T')[0] });
-        }
-
-        for(let i = 0; i < 7; i++) {
-            const el = document.getElementById(`wd-${i}`); if(!el) continue;
-            el.textContent = currentWeekDates[i].dayNum;
-            el.className = 'day-number' + (selectedDayIndex === i ? ' selected-day' : '');
-            el.style.backgroundColor = ''; el.style.color = '';
-
-            (familyData.Familie.events || []).forEach(e => {
-                if(currentWeekDates[i].fullDateStr === e.start) { el.style.backgroundColor = e.color || '#e67e22'; el.style.color = 'white'; }
-            });
+            const el = document.getElementById(`wd-${i}`); if(!el) continue; el.textContent = currentWeekDates[i].dayNum; el.className = 'day-number' + (selectedDayIndex === i ? ' selected-day' : ''); el.style.backgroundColor = ''; el.style.color = '';
+            (familyData.Familie.events || []).forEach(e => { if(currentWeekDates[i].fullDateStr === e.start) { el.style.backgroundColor = e.color || '#e67e22'; el.style.color = 'white'; } });
         }
     }
 
@@ -525,53 +500,26 @@
         const container = document.getElementById('day-preview-container');
         if (selectedDayIndex === index) { selectedDayIndex = null; container.style.display = 'none'; } 
         else {
-            selectedDayIndex = index;
-            const target = currentWeekDates[index].fullDateStr;
-            const active = (familyData.Familie.events || []).filter(e => target === e.start);
-            container.style.display = 'block';
+            selectedDayIndex = index; const target = currentWeekDates[index].fullDateStr; const active = (familyData.Familie.events || []).filter(e => target === e.start); container.style.display = 'block';
             document.getElementById('day-preview-text').innerHTML = active.length === 0 ? `<em>Keine Termine</em>` : active.map(e => `• <strong>${e.name}</strong>`).join('<br>');
         }
         renderAll();
     }
 
-    // --- SYSTEMFUNKTIONEN & DESIGN ---
-    function flipHeader() {
-        const flip = document.getElementById('header-flip'); flip.classList.add('flipped');
-        if(flipTimer) clearTimeout(flipTimer);
-        flipTimer = setTimeout(() => flip.classList.remove('flipped'), 5000);
-    }
-
+    function flipHeader() { const flip = document.getElementById('header-flip'); flip.classList.add('flipped'); if(flipTimer) clearTimeout(flipTimer); flipTimer = setTimeout(() => flip.classList.remove('flipped'), 5000); }
     function openSettings() { document.getElementById('settings-modal').style.display='flex'; }
     function closeSettings() { document.getElementById('settings-modal').style.display='none'; }
     function toggleDarkMode() { config.darkMode = !config.darkMode; document.getElementById('app-body').classList.toggle('dark-mode', config.darkMode); }
-
     function applyGradient() {
-        const grad = document.getElementById('set-color').value;
-        config.gradient = grad;
-        document.getElementById('app-body').style.setProperty('--header-gradient', grad);
+        const grad = document.getElementById('set-color').value; config.gradient = grad; document.getElementById('app-body').style.setProperty('--header-gradient', grad);
         const extractedColor = grad.includes('f1c40f') ? '#e67e22' : (grad.includes('00cec9') ? '#0984e3' : '#8e44ad');
-        document.getElementById('app-body').style.setProperty('--primary-color', extractedColor);
-        renderAll();
+        document.getElementById('app-body').style.setProperty('--primary-color', extractedColor); renderAll();
     }
-
-    function applyView() {
-        config.view = document.getElementById('set-view').value;
-        document.getElementById('view-normal').style.display = config.view === 'normal' ? 'block' : 'none';
-        document.getElementById('view-beta').style.display = config.view === 'beta' ? 'flex' : 'none';
-        switchMember(activeMember);
-    }
-
+    function applyView() { config.view = document.getElementById('set-view').value; document.getElementById('view-normal').style.display = config.view === 'normal' ? 'block' : 'none'; document.getElementById('view-beta').style.display = config.view === 'beta' ? 'flex' : 'none'; switchMember(activeMember); }
     function updatePin() {
-        const oldP = document.getElementById('pin-old').value;
-        const n1 = document.getElementById('pin-new1').value;
-        const n2 = document.getElementById('pin-new2').value;
-        if(oldP === GEHEIMER_PIN && n1 === n2 && n1.length === 4) {
-            GEHEIMER_PIN = n1; database.ref('familyZentrumConfig/pin').set(n1);
-            alert("PIN erfolgreich geändert!"); closeSettings();
-        } else { alert("Fehler beim Ändern des PINs!"); }
+        const oldP = document.getElementById('pin-old').value; const n1 = document.getElementById('pin-new1').value; const n2 = document.getElementById('pin-new2').value;
+        if(oldP === GEHEIMER_PIN && n1 === n2 && n1.length === 4) { GEHEIMER_PIN = n1; database.ref('familyZentrumConfig/pin').set(n1); alert("PIN geändert!"); closeSettings(); } else { alert("Fehler!"); }
     }
-
-    // --- KLASSISCHE FUNKTIONEN (ERSTELLEN / LÖSCHEN) ---
     function openNotes(i) { activeItemIndex = i; document.getElementById('modal-title').textContent = activeMember === 'Familie' ? familyData.Familie.events[i].name : familyData[activeMember].topics[i].name; document.getElementById('notes-modal').style.display = 'flex'; renderNotes(); }
     function closeModal() { document.getElementById('notes-modal').style.display = 'none'; renderAll(); }
     function renderNotes() { const list = document.getElementById('modal-notes-list'); list.innerHTML = ''; let notes = activeMember === 'Familie' ? familyData.Familie.events[activeItemIndex].notes || [] : familyData[activeMember].topics[activeItemIndex].notes || []; if(notes.length === 0) { list.innerHTML = '<li>Keine Notizen</li>'; return; } notes.forEach((n, ni) => { list.innerHTML += `<li style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>• ${n}</span><button class="btn-delete" onclick="deleteNote(${ni})">X</button></li>`; }); }
