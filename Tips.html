@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unser Familien-Zentrum</title>
+    <title>Unser Familien-Zentrum v1.1 Premium</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
@@ -16,159 +16,281 @@
             --delete-color: #e74c3c;
             --border-radius: 12px;
             --shadow: 0 4px 6px rgba(0,0,0,0.05);
+            --header-gradient: linear-gradient(135deg, #8e44ad, #3498db, #2ecc71);
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        .dark-mode {
+            --bg-color: #1e272e;
+            --card-bg: #2f3640;
+            --text-color: #f5f6fa;
+            --shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background 0.3s, color 0.3s; }
         body { background-color: var(--bg-color); color: var(--text-color); padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 1200px; }
+        .container { width: 100%; max-width: 1200px; display: none; }
         
-        header { 
-            background: linear-gradient(135deg, #8e44ad, var(--primary-color)); 
-            color: white; padding: 20px; border-radius: var(--border-radius); 
-            text-align: center; margin-bottom: 20px; box-shadow: var(--shadow); 
+        /* 3D Flip Header */
+        .flip-container { perspective: 1000px; width: 100%; margin-bottom: 20px; cursor: pointer; }
+        .flipper { position: relative; width: 100%; height: 130px; text-align: center; transform-style: preserve-3d; transition: transform 0.6s; }
+        .flip-container.flipped .flipper { transform: rotateX(180deg); }
+        
+        .front, .back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: var(--border-radius); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; box-shadow: var(--shadow); background: var(--header-gradient); background-size: 400% 400%; animation: gradientMove 8s ease infinite; }
+        .back { transform: rotateX(180deg); background: #2c3e50; gap: 10px; }
+        
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
-        #clock { font-size: 2.5rem; font-weight: bold; margin-bottom: 5px; }
+        
+        #clock { font-size: 2.5rem; font-weight: bold; }
         #date { font-size: 1.1rem; opacity: 0.9; }
-        .setup-banner { background-color: #e74c3c; color: white; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: bold; }
+        .btn-settings-trigger { background: var(--primary-color); border: none; color: white; padding: 6px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; }
 
-        /* Personen Navigations-Leiste */
-        .family-nav {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-        .member-btn {
-            background-color: #fff;
-            color: #333;
-            border: 2px solid #ddd;
-            padding: 12px 24px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            border-radius: 30px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: var(--shadow);
-        }
-        .member-btn:hover {
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-            transform: translateY(-2px);
-        }
-        .member-btn.active {
-            background-color: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
+        /* Login Screen */
+        .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; }
+        .login-box { background-color: var(--card-bg); padding: 30px; border-radius: var(--border-radius); box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; max-width: 350px; width: 90%; }
+        .login-box input { width: 100%; padding: 12px; font-size: 1.3rem; text-align: center; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 15px; outline: none; }
+        .login-box button { background: linear-gradient(135deg, #8e44ad, var(--primary-color)); color: white; border: none; padding: 12px; width: 100%; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        .error-msg { color: var(--delete-color); font-size: 0.9rem; margin-top: 10px; display: none; font-weight: bold; }
 
-        /* Dashboard Gitter */
-        .dashboard-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
-            gap: 20px; 
-        }
-        .card { background-color: var(--card-bg); border-radius: var(--border-radius); padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; height: 420px; }
-        .card h2 { font-size: 1.2rem; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #eee; color: #2c3e50; display: flex; justify-content: space-between; align-items: center; }
-        .counter-badge { background-color: #eee; color: #666; font-size: 0.85rem; padding: 2px 8px; border-radius: 20px; font-weight: normal; }
+        /* Navigation */
+        .family-nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; }
+        .member-btn { background-color: var(--card-bg); color: var(--text-color); border: 2px solid #ddd; padding: 12px 24px; font-size: 1.1rem; font-weight: bold; border-radius: 30px; cursor: pointer; box-shadow: var(--shadow); }
+        .member-btn.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .member-btn.family-style { border-color: #8e44ad; color: #8e44ad; }
+        .member-btn.family-style.active { background-color: #8e44ad; color: white; }
+
+        /* Grid & Cards */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; width: 100%; }
+        .card { background-color: var(--card-bg); border-radius: var(--border-radius); padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; height: 560px; }
+        .card h2 { font-size: 1.2rem; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .counter-badge { background-color: #eee; color: #666; font-size: 0.85rem; padding: 2px 8px; border-radius: 20px; }
         
-        .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
-        .input-group input, .input-group [type="date"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; outline: none; }
-        .input-group button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.2s; white-space: nowrap; }
+        .input-group { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .input-group input, .input-group select { flex: 1; min-width: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; background: var(--card-bg); color: var(--text-color); }
+        .input-group button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         
+        /* Listen */
         .list-container { overflow-y: auto; flex: 1; list-style: none; }
-        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: #f9f9f9; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid var(--primary-color); }
-        .clickable-text { cursor: pointer; flex: 1; padding-right: 10px; }
-        .clickable-text:hover { color: var(--primary-color); text-decoration: underline; }
-        .list-item.completed { border-left-color: #bdc3c7; opacity: 0.7; }
-        .list-item.completed .item-text { text-decoration: line-through; color: #7f8c8d; }
-        .item-content { display: flex; align-items: center; gap: 10px; flex: 1; }
-        .item-text { font-size: 0.95rem; word-break: break-word; }
-        .item-date { font-size: 0.8rem; color: #7f8c8d; margin-left: auto; padding-right: 10px; }
-        .btn-delete { background: none; border: none; color: var(--delete-color); cursor: pointer; font-size: 1.1rem; padding: 2px 6px; border-radius: 4px; }
-        .btn-delete:hover { background-color: #fde8e7; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: rgba(0,0,0,0.02); border-radius: 6px; margin-bottom: 8px; border-left: 4px solid var(--primary-color); }
+        .clickable-text { cursor: pointer; flex: 1; }
+        .btn-delete { background: none; border: none; color: var(--delete-color); cursor: pointer; padding: 2px 6px; }
         .checkbox { width: 18px; height: 18px; cursor: pointer; }
+        .completed { opacity: 0.5; text-decoration: line-through; }
+
+        /* BETA-MODUS SPECIAL STYLES */
+        .beta-body { display: flex; flex-direction: row; padding: 0; height: 100vh; overflow: hidden; width: 100%; }
+        .beta-sidebar { width: 260px; background-color: var(--card-bg); border-right: 1px solid #ddd; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: var(--shadow); }
+        .beta-content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
+        .beta-clock-container { text-align: center; margin-bottom: 20px; }
         
-        /* Spaltenfarben */
-        .card.lernthemen .list-item { border-left-color: #9b59b6; }
-        .card.kalender .list-item { border-left-color: #e67e22; }
-        .card.todo-open .list-item { border-left-color: #e67e22; }
-        .card.todo-done .list-item { border-left-color: var(--accent-color); }
-        
+        /* Großer Google-Kalender für Beta */
+        .big-calendar { display: flex; flex-direction: column; width: 100%; background: var(--card-bg); border-radius: var(--border-radius); padding: 15px; box-shadow: var(--shadow); }
+        .big-calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .big-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+        .calendar-cell { min-height: 85px; border: 1px solid rgba(0,0,0,0.08); padding: 4px; border-radius: 4px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 2px; position: relative; }
+        .calendar-cell .day-label { font-weight: bold; margin-bottom: 2px; }
+        .calendar-cell.today-cell { background-color: rgba(52, 152, 219, 0.15); border: 2px solid var(--primary-color); }
+        .calendar-event-pill { font-size: 0.7rem; padding: 2px 4px; color: white; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
+        .btn-today { background-color: #8e44ad; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+        /* Modals / Overlays */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background-color: white; padding: 25px; border-radius: var(--border-radius); width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; max-height: 80vh; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #eee; }
-        .modal-header h3 { color: #9b59b6; word-break: break-word; }
-        .btn-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #7f8c8d; }
-        .notes-list { list-style: none; overflow-y: auto; flex: 1; margin-bottom: 15px; }
-        .note-item { background-color: #fcf8e3; border-left: 4px solid #f1c40f; padding: 10px; border-radius: 4px; margin-bottom: 8px; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: flex-start; word-break: break-word; }
+        .modal-content { background-color: var(--card-bg); padding: 25px; border-radius: var(--border-radius); width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; max-height: 80vh; }
+        .week-navigation-container { background-color: rgba(0,0,0,0.03); border: 1px solid #eee; border-radius: 8px; padding: 10px; margin-bottom: 15px; }
+        .calendar-week-view { display: grid; grid-template-columns: auto repeat(7, 1fr) auto; gap: 5px; text-align: center; }
+        .day-number { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; margin: auto; }
+        .day-number.selected-day { border: 2px solid var(--text-color); }
+        .day-preview-box { background-color: #fff9e6; color: #333; border-left: 4px solid #f1c40f; padding: 8px 12px; border-radius: 4px; margin-bottom: 15px; }
+        .nav-arrow { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #8e44ad; font-weight: bold; }
     </style>
 </head>
-<body>
+<body id="body-tag">
 
-<div class="container">
-    <div id="setup-notice" class="setup-banner">⚠️ Cloud-Modus inaktiv. Verbindung zur Datenbank wird aufgebaut...</div>
-    
-    <header>
-        <div id="clock">00:00:00</div>
-        <div id="date">Lade Datum...</div>
-    </header>
+<div class="login-overlay" id="login-screen">
+    <div class="login-box">
+        <h2>🔒 Familien-Zentrum</h2>
+        <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">Bitte gib den Familien-PIN ein:</p>
+        <input type="password" id="pin-input" maxlength="4" placeholder="••••" onkeydown="if(event.key === 'Enter') checkPin()">
+        <button onclick="checkPin()">Einloggen</button>
+        <div class="error-msg" id="pin-error">Falscher PIN!</div>
+    </div>
+</div>
 
-    <div class="family-nav">
-        <button class="member-btn active" onclick="switchMember('Lukas')">👦 Lukas</button>
-        <button class="member-btn" onclick="switchMember('Kathrin')">👩 Kathrin</button>
-        <button class="member-btn" onclick="switchMember('Marlene')">👧 Marlene</button>
-        <button class="member-btn" onclick="switchMember('Anna')">🦄 Anna</button>
-        <button class="member-btn" onclick="switchMember('Robert')">👨 Robert</button>
+<div class="container" id="main-content">
+    <div class="flip-container" id="header-flip" onclick="flipHeader()">
+        <div class="flipper">
+            <div class="front">
+                <div id="clock">00:00:00</div>
+                <div id="date">Lade Datum...</div>
+            </div>
+            <div class="back" onclick="event.stopPropagation()">
+                <h3>ℹ️ System-Info</h3>
+                <p>Aktuelle Version: <strong>1.1 (Beta Ready)</strong></p>
+                <button class="btn-settings-trigger" onclick="openSettingsModal()">⚙️ Einstellungen</button>
+            </div>
+        </div>
     </div>
 
-    <h2 id="current-title" style="text-align: center; margin-bottom: 20px; color: #2c3e50;">Dashboard von Lukas</h2>
+    <div class="family-nav" id="normal-nav">
+        <button class="member-btn active" onclick="switchMember('Lukas')">Lukas</button>
+        <button class="member-btn" onclick="switchMember('Kathrin')">Kathrin</button>
+        <button class="member-btn" onclick="switchMember('Marlene')">Marlene</button>
+        <button class="member-btn" onclick="switchMember('Anna')">Anna</button>
+        <button class="member-btn" onclick="switchMember('Robert')">Robert</button>
+        <button class="member-btn family-style" onclick="switchMember('Familie')">Familie</button>
+    </div>
 
-    <div class="dashboard-grid">
-        <div class="card lernthemen" id="lernthemen-card">
-            <h2>📚 Lernthemen <small style="font-size: 0.75rem; color:#7f8c8d; font-weight:normal;">(Klicken für Notizen)</small></h2>
-            <div class="input-group">
+    <h2 id="current-title" style="text-align: center; margin-bottom: 20px;">Dashboard von Lukas</h2>
+
+    <div class="dashboard-grid" id="normal-grid">
+        <div class="card" id="left-card">
+            <h2 id="left-card-title">Lernthemen</h2>
+            
+            <div class="week-navigation-container" id="calendar-week-bar" style="display: none;">
+                <div class="calendar-week-view">
+                    <button class="nav-arrow" onclick="changeWeek(-1); event.stopPropagation();">◀</button>
+                    <div onclick="selectDay(0)">MO<div class="day-number" id="wd-0">-</div></div>
+                    <div onclick="selectDay(1)">DI<div class="day-number" id="wd-1">-</div></div>
+                    <div onclick="selectDay(2)">MI<div class="day-number" id="wd-2">-</div></div>
+                    <div onclick="selectDay(3)">DO<div class="day-number" id="wd-3">-</div></div>
+                    <div onclick="selectDay(4)">FR<div class="day-number" id="wd-4">-</div></div>
+                    <div onclick="selectDay(5)">SA<div class="day-number" id="wd-5">-</div></div>
+                    <div onclick="selectDay(6)">SO<div class="day-number" id="wd-6">-</div></div>
+                    <button class="nav-arrow" onclick="changeWeek(1); event.stopPropagation();">▶</button>
+                </div>
+            </div>
+
+            <div class="day-preview-box" id="day-preview-container" style="display: none;">
+                <div id="day-preview-text">Keine Termine</div>
+            </div>
+
+            <div class="input-group" id="topic-input-group">
                 <input type="text" id="topic-input" placeholder="Neues Thema...">
                 <button onclick="addTopic()">Hinzufügen</button>
             </div>
-            <ul id="topics-list" class="list-container"></ul>
+            
+            <div class="input-group" id="calendar-input-group" style="display: none; flex-direction: column; gap: 5px;">
+                <input type="text" id="event-input" placeholder="Termin Name...">
+                <div style="display: flex; gap: 5px;"><input type="date" id="event-start"><input type="date" id="event-end"></div>
+                <div style="display: flex; gap: 5px;">
+                    <select id="event-color">
+                        <option value="#e67e22">Orange</option><option value="#3498db">Blau</option>
+                        <option value="#2ecc71">Grün</option><option value="#9b59b6">Violett</option>
+                        <option value="#e74c3c">Rot</option><option value="#f1c40f">Gelb</option>
+                        <option value="#e84393">Pink</option><option value="#00cec9">Türkis</option>
+                    </select>
+                    <button onclick="addEvent()" style="flex: 1;">Eintragen</button>
+                </div>
+            </div>
+            <ul id="left-list" class="list-container"></ul>
         </div>
 
-        <div class="card todo-open">
-            <h2>📝 To-Do: Offen <span id="counter-open" class="counter-badge">0</span></h2>
-            <div class="input-group">
-                <input type="text" id="todo-input" placeholder="Neue Aufgabe...">
-                <button onclick="addTodo()">+ Los</button>
-            </div>
+        <div class="card">
+            <h2 id="todo-open-title">To-Do: Offen <span id="counter-open" class="counter-badge">0</span></h2>
+            <div class="input-group"><input type="text" id="todo-input" placeholder="Aufgabe..."><button onclick="addTodo()">+</button></div>
             <ul id="todos-open-list" class="list-container"></ul>
         </div>
 
-        <div class="card todo-done">
-            <h2>🎉 Erledigt <span id="counter-done" class="counter-badge">0</span></h2>
-            <div style="margin-bottom: 15px; height: 38px; display: flex; align-items: center; color: #7f8c8d; font-size: 0.9rem; font-style: italic;">
-                Gute Arbeit!
-            </div>
+        <div class="card">
+            <h2>Erledigt <span id="counter-done" class="counter-badge">0</span></h2>
             <ul id="todos-done-list" class="list-container"></ul>
+        </div>
+    </div>
+</div>
+
+<div id="beta-container" style="display: none; width: 100%;">
+    <div class="beta-body">
+        <div class="beta-sidebar">
+            <h2 style="font-size: 1.3rem; border-bottom: 2px solid #eee; padding-bottom: 10px;">🌟 Beta-Menü</h2>
+            <button class="member-btn active" style="width:100%" onclick="switchMember('Lukas')">Lukas</button>
+            <button class="member-btn" style="width:100%" onclick="switchMember('Kathrin')">Kathrin</button>
+            <button class="member-btn" style="width:100%" onclick="switchMember('Marlene')">Marlene</button>
+            <button class="member-btn" style="width:100%" onclick="switchMember('Anna')">Anna</button>
+            <button class="member-btn" style="width:100%" onclick="switchMember('Robert')">Robert</button>
+            <button class="member-btn family-style" style="width:100%" onclick="switchMember('Familie')">👨‍👩‍👧‍👦 Familie</button>
+            <hr>
+            <button class="btn-settings-trigger" style="width:100%" onclick="openSettingsModal()">⚙️ Einstellungen</button>
+            <button onclick="toggleDarkMode()" style="padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">🌓 Dark/White Mode</button>
+            <div style="margin-top: auto; font-size: 0.8rem; text-align: center; opacity: 0.6;">Version 1.1 (Beta)</div>
+        </div>
+        
+        <div class="beta-content">
+            <div class="beta-clock-container" onclick="flipHeader()">
+                <div id="beta-clock" style="font-size: 1.8rem; font-weight: bold;">00:00:00</div>
+                <div id="beta-date" style="font-size: 0.9rem; opacity: 0.8;">Datum</div>
+            </div>
+            
+            <h2 id="beta-current-title" style="margin-bottom: 20px;">Dashboard</h2>
+            
+            <div id="beta-big-calendar-view" class="big-calendar" style="display: none; margin-bottom: 20px;">
+                <div class="big-calendar-header">
+                    <button class="nav-arrow" onclick="changeMonth(-1)">◀</button>
+                    <h3 id="calendar-month-title">Monat</h3>
+                    <div>
+                        <button class="btn-today" onclick="jumpToToday()">Heute</button>
+                        <button class="nav-arrow" onclick="changeMonth(1)">▶</button>
+                    </div>
+                </div>
+                <div class="big-calendar-grid" id="big-calendar-days"></div>
+            </div>
+
+            <div class="dashboard-grid" id="beta-grid-append"></div>
+        </div>
+    </div>
+</div>
+
+<div id="settings-modal" class="modal-overlay" onclick="closeSettingsModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3>⚙️ Systemeinstellungen</h3>
+            <button class="btn-close" onclick="closeSettingsModal()">X</button>
+        </div>
+        <div style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 15px;">
+            <div>
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">System-Ansicht:</label>
+                <select id="setting-view" onchange="styleViewChange()">
+                    <option value="normal">Normal-Modus (Standard)</option>
+                    <option value="beta">Beta-Modus (Bessere Variante)</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Uhr-Design (Farbverlauf):</label>
+                <select id="setting-gradient" onchange="changeHeaderGradient()">
+                    <option value="linear-gradient(135deg, #8e44ad, #3498db, #2ecc71)">Klassisch (Violett-Blau-Grün)</option>
+                    <option value="linear-gradient(135deg, #f1c40f, #e67e22, #e74c3c)">Sunset (Gelb-Orange-Rot)</option>
+                    <option value="linear-gradient(135deg, #00cec9, #0984e3, #6c5ce7)">Ocean (Türkis-Blau-Violett)</option>
+                    <option value="linear-gradient(135deg, #2ecc71, #27ae60, #11998e)">Forest (Frisches Gründer-Design)</option>
+                </select>
+            </div>
+            <div style="background: rgba(0,0,0,0.03); padding: 10px; border-radius: 6px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px; color: #e74c3c;">🔑 Sicherheits-PIN ändern:</label>
+                <input type="password" id="pin-old" placeholder="Aktueller PIN" style="width:100%; padding:6px; margin-bottom:5px;">
+                <input type="password" id="pin-new1" placeholder="Neuer PIN (4 Zahlen)" maxlength="4" style="width:100%; padding:6px; margin-bottom:5px;">
+                <input type="password" id="pin-new2" placeholder="Neuer PIN wiederholen" maxlength="4" style="width:100%; padding:6px; margin-bottom:5px;">
+                <button onclick="saveNewPin()" style="background:#2ecc71; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:bold; width:100%;">PIN speichern</button>
+                <div id="settings-pin-error" style="color:red; font-size:0.8rem; margin-top:5px; display:none;"></div>
+            </div>
         </div>
     </div>
 </div>
 
 <div id="notes-modal" class="modal-overlay" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <h3 id="modal-title">Thema Details</h3>
-            <button class="btn-close" onclick="closeModal()">×</button>
-        </div>
-        <h4 style="margin-bottom: 8px; color: #555; font-size: 0.9rem;">Notizen:</h4>
-        <ul id="modal-notes-list" class="notes-list"></ul>
-        <div class="input-group" style="margin-bottom: 0;">
-            <input type="text" id="note-input" placeholder="Wichtige Info merken...">
-            <button onclick="addNote()" style="background-color: #9b59b6;">Merken</button>
-        </div>
+        <div class="modal-header"><h3 id="modal-title">Details</h3><button onclick="closeModal()">X</button></div>
+        <ul id="modal-notes-list" style="list-style:none; overflow-y:auto; flex:1; margin-bottom:15px;"></ul>
+        <div class="input-group"><input type="text" id="note-input" placeholder="Notiz..."><button id="modal-save-btn" onclick="addNote()">Merken</button></div>
     </div>
 </div>
 
 <script>
-    // --- Deine echten Firebase-Schlüssel ---
+    let GEHEIMER_PIN = "1234";
+    let currentView = "normal";
+    let isDarkMode = false;
+    let currentMonthOffset = 0; // Für Beta-Kalender
+
     const firebaseConfig = {
         apiKey: "AIzaSyAxam2TnWekNHYsKGfVfYoFEz2Jo-QZjEs",
         authDomain: "dashboard-4dacb.firebaseapp.com",
@@ -180,4 +302,320 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const database = firebase
+    const database = firebase.database();
+
+    let currentMember = 'Lukas';
+    let weekOffset = 0; 
+    let currentWeekDates = [];
+    let selectedDayIndex = null;
+    let activeItemIndex = null;
+    let flipTimer = null;
+    
+    let familyData = {
+        Lukas: { topics: [], todos: [] }, Kathrin: { topics: [], todos: [] },
+        Marlene: { topics: [], todos: [] }, Anna: { todos: [] },
+        Robert: { todos: [] }, Familie: { events: [], todos: [] }
+    };
+
+    // PIN Login prüfen
+    function checkPin() {
+        const input = document.getElementById('pin-input').value;
+        if (input === GEHEIMER_PIN) {
+            document.getElementById('login-screen').style.display = 'none';
+            styleViewChange(); // Zeigt die korrekte Ansicht (Normal oder Beta)
+            initData();
+        } else {
+            document.getElementById('pin-error').style.display = 'block';
+            document.getElementById('pin-input').value = '';
+        }
+    }
+
+    // PIN aus den Einstellungen heraus ändern
+    function saveNewPin() {
+        const oldPin = document.getElementById('pin-old').value;
+        const n1 = document.getElementById('pin-new1').value;
+        const n2 = document.getElementById('pin-new2').value;
+        const err = document.getElementById('settings-pin-error');
+        
+        if(oldPin !== GEHEIMER_PIN) { err.textContent = "Der aktuelle PIN ist falsch!"; err.style.display="block"; return; }
+        if(n1.length < 4 || isNaN(n1)) { err.textContent = "Der neue PIN muss aus 4 Zahlen bestehen!"; err.style.display="block"; return; }
+        if(n1 !== n2) { err.textContent = "Die neuen PINs stimmen nicht überein!"; err.style.display="block"; return; }
+        
+        GEHEIMER_PIN = n1;
+        database.ref('familyZentrumConfig/pin').set(n1);
+        err.style.textContent = "PIN erfolgreich geändert!";
+        err.style.color = "green"; err.style.display="block";
+        document.getElementById('pin-old').value=''; document.getElementById('pin-new1').value=''; document.getElementById('pin-new2').value='';
+    }
+
+    // 3D Flip Logik mit 5 Sekunden Rückstellung
+    function flipHeader() {
+        const container = document.getElementById('header-flip');
+        container.classList.add('flipped');
+        
+        if(flipTimer) clearTimeout(flipTimer);
+        flipTimer = setTimeout(() => {
+            container.classList.remove('flipped');
+        }, 5000);
+    }
+
+    function changeHeaderGradient() {
+        const grad = document.getElementById('setting-gradient').value;
+        document.getElementById('body-tag').style.setProperty('--header-gradient', grad);
+    }
+
+    function toggleDarkMode() {
+        isDarkMode = !isDarkMode;
+        document.getElementById('body-tag').classList.toggle('dark-mode', isDarkMode);
+    }
+
+    // Wechsel zwischen Normal und Beta-Modus
+    function styleViewChange() {
+        currentView = document.getElementById('setting-view').value;
+        const normalCont = document.getElementById('main-content');
+        const betaCont = document.getElementById('beta-container');
+        const gridCard = document.getElementById('left-card').parentElement;
+
+        if(currentView === "beta") {
+            normalCont.style.display = 'none';
+            betaCont.style.display = 'block';
+            document.getElementById('beta-grid-append').appendChild(document.getElementById('left-card'));
+            document.getElementById('beta-grid-append').appendChild(gridCard.children[0]); // To-Do Open
+            document.getElementById('beta-grid-append').appendChild(gridCard.children[0]); // To-Do Done
+        } else {
+            betaCont.style.display = 'none';
+            normalCont.style.display = 'block';
+            document.getElementById('normal-grid').appendChild(document.getElementById('left-card'));
+            document.getElementById('normal-grid').appendChild(document.getElementById('beta-grid-append').children[0]);
+            document.getElementById('normal-grid').appendChild(document.getElementById('beta-grid-append').children[0]);
+        }
+        renderAll();
+    }
+
+    // Zeit-Update
+    function updateClock() {
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        const dateStr = now.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        
+        document.getElementById('clock').textContent = timeStr;
+        document.getElementById('date').textContent = dateStr;
+        document.getElementById('beta-clock').textContent = timeStr;
+        document.getElementById('beta-date').textContent = dateStr;
+    }
+    setInterval(updateClock, 1000); updateClock();
+
+    // Member wechseln
+    function switchMember(memberName) {
+        currentMember = memberName;
+        selectedDayIndex = null;
+        document.getElementById('day-preview-container').style.display = 'none';
+        
+        document.querySelectorAll('.member-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.textContent.trim().includes(memberName));
+        });
+        
+        const leftCard = document.getElementById('left-card');
+        const leftTitle = document.getElementById('left-card-title');
+        const topicInputG = document.getElementById('topic-input-group');
+        const calendarInputG = document.getElementById('calendar-input-group');
+        const calendarWeekBar = document.getElementById('calendar-week-bar');
+        const betaCalendarView = document.getElementById('beta-big-calendar-view');
+
+        if (currentMember === 'Familie') {
+            document.getElementById('current-title').textContent = `Gemeinsamer Bereich`;
+            document.getElementById('beta-current-title').textContent = `Gemeinsamer Familien-Kalender`;
+            leftCard.style.display = currentView === 'beta' ? 'none' : 'flex';
+            betaCalendarView.style.display = currentView === 'beta' ? 'flex' : 'none';
+            leftTitle.innerHTML = `Kalender`;
+            topicInputG.style.display = 'none';
+            calendarInputG.style.display = 'flex';
+            calendarWeekBar.style.display = 'block';
+        } else if (currentMember === 'Anna' || currentMember === 'Robert') {
+            const t = `Dashboard von ${currentMember}`;
+            document.getElementById('current-title').textContent = t;
+            document.getElementById('beta-current-title').textContent = t;
+            leftCard.style.display = 'none';
+            betaCalendarView.style.display = 'none';
+            calendarWeekBar.style.display = 'none';
+        } else {
+            const t = `Dashboard von ${currentMember}`;
+            document.getElementById('current-title').textContent = t;
+            document.getElementById('beta-current-title').textContent = t;
+            leftCard.style.display = 'flex';
+            betaCalendarView.style.display = 'none';
+            leftTitle.innerHTML = `Lernthemen`;
+            topicInputG.style.display = 'flex';
+            calendarInputG.style.display = 'none';
+            calendarWeekBar.style.display = 'none';
+        }
+        renderAll();
+    }
+
+    // Synchronisation & Firebase-Verbindung
+    function initData() {
+        database.ref('familyZentrumConfig/pin').on('value', (snap) => { if(snap.val()) GEHEIMER_PIN = snap.val(); });
+        database.ref('familyZentrumData').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                Object.keys(familyData).forEach(member => {
+                    if (data[member]) {
+                        familyData[member].todos = data[member].todos || [];
+                        if (familyData[member].topics) familyData[member].topics = data[member].topics || [];
+                        if (familyData[member].events) familyData[member].events = data[member].events || [];
+                    }
+                });
+            }
+            document.getElementById('setup-notice').style.display = 'none';
+            renderAll();
+        });
+    }
+
+    function syncData() { database.ref('familyZentrumData').set(familyData); }
+    function formatDate(dateStr) { if(!dateStr) return ""; const d = new Date(dateStr); return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }); }
+    function changeWeek(direction) { weekOffset += direction; renderAll(); }
+    
+    // BETA-KALENDER STEUERUNG (Google Kalender Stil)
+    function changeMonth(dir) { currentMonthOffset += dir; renderBetaCalendar(); }
+    function jumpToToday() { currentMonthOffset = 0; renderBetaCalendar(); }
+
+    function renderBetaCalendar() {
+        const grid = document.getElementById('big-calendar-days');
+        grid.innerHTML = '';
+        
+        const now = new Date();
+        const targetMonth = new Date(now.getFullYear(), now.getMonth() + currentMonthOffset, 1);
+        document.getElementById('calendar-month-title').textContent = targetMonth.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+        
+        // Wochentage-Kopfzeile
+        const daysShort = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+        daysShort.forEach(d => grid.innerHTML += `<div style="font-weight:bold; font-size:0.8rem; text-align:center; padding-bottom:5px;">${d}</div>`);
+        
+        const firstDayIndex = (targetMonth.getDay() + 6) % 7;
+        const daysInMonth = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).getDate();
+        
+        // Leere Zellen für Vormonat
+        for(let i=0; i<firstDayIndex; i++) { grid.innerHTML += '<div></div>'; }
+        
+        const events = familyData.Familie.events || [];
+        
+        // Tage befüllen
+        for(let day=1; day<=daysInMonth; day++) {
+            const currentLoopDate = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), day);
+            const dateString = currentLoopDate.toISOString().split('T')[0];
+            
+            let isToday = currentLoopDate.toDateString() === now.toDateString();
+            let dayCellHtml = `<div class="calendar-cell ${isToday ? 'today-cell' : ''}"><div class="day-label">${day}</div>`;
+            
+            // Termine für diesen Tag einsortieren
+            events.forEach((event, idx) => {
+                if(dateString >= event.start && dateString <= event.end) {
+                    dayCellHtml += `<div class="calendar-event-pill" style="background:${event.color || '#e67e22'}" onclick="openNotes(${idx})">${event.name}</div>`;
+                }
+            });
+            
+            dayCellHtml += '</div>';
+            grid.innerHTML += dayCellHtml;
+        }
+    }
+
+    function updateWeekBarDates(events) {
+        const now = new Date();
+        const currentDay = now.getDay(); 
+        const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay; 
+        const monday = new Date(now);
+        monday.setDate(now.getDate() + distanceToMonday + (weekOffset * 7));
+
+        currentWeekDates = [];
+        for(let i = 0; i < 7; i++) {
+            let d = new Date(monday); d.setDate(monday.getDate() + i);
+            currentWeekDates.push({ dayNum: d.getDate(), fullDateStr: d.toISOString().split('T')[0] });
+        }
+
+        for(let i = 0; i < 7; i++) {
+            const el = document.getElementById(`wd-${i}`);
+            if(!el) continue;
+            el.textContent = currentWeekDates[i].dayNum;
+            el.className = 'day-number' + (selectedDayIndex === i ? ' selected-day' : '');
+            el.style.backgroundColor = ''; el.style.color = '';
+
+            events.forEach(event => {
+                if(currentWeekDates[i].fullDateStr >= event.start && currentWeekDates[i].fullDateStr <= event.end) {
+                    el.style.backgroundColor = event.color || '#e67e22'; el.style.color = 'white';
+                }
+            });
+        }
+    }
+
+    function selectDay(index) {
+        const previewContainer = document.getElementById('day-preview-container');
+        if (selectedDayIndex === index) { selectedDayIndex = null; previewContainer.style.display = 'none'; } 
+        else {
+            selectedDayIndex = index;
+            const targetDateStr = currentWeekDates[index].fullDateStr;
+            const activeEvents = (familyData.Familie.events || []).filter(e => targetDateStr >= e.start && targetDateStr <= e.end);
+            previewContainer.style.display = 'block';
+            document.getElementById('day-preview-text').innerHTML = activeEvents.length === 0 ? `<em>Keine Termine</em>` : activeEvents.map(e => `• <strong>${e.name}</strong>`).join('<br>');
+        }
+        renderAll();
+    }
+
+    function renderAll() {
+        if(currentView === 'beta' && currentMember === 'Familie') { renderBetaCalendar(); }
+        
+        const memberData = familyData[currentMember];
+        const leftList = document.getElementById('left-list');
+        if (!leftList) return;
+        leftList.innerHTML = '';
+
+        if (currentMember === 'Familie') {
+            const events = memberData.events || [];
+            updateWeekBarDates(events);
+            events.forEach((event, i) => {
+                let dateDisplay = formatDate(event.start) + (event.end && event.end !== event.start ? ` bis ${formatDate(event.end)}` : '');
+                leftList.innerHTML += `<li class="list-item" style="border-left-color: ${event.color || '#e67e22'};"><span class="clickable-text" onclick="openNotes(${i})"><strong>${event.name}</strong><small style="display:block; color:#666;">${dateDisplay}</small></span><button class="btn-delete" onclick="deleteEvent(${i})">X</button></li>`;
+            });
+        } else if (memberData.topics) {
+            memberData.topics.forEach((topic, i) => {
+                const noteCount = topic.notes ? topic.notes.length : 0;
+                leftList.innerHTML += `<li class="list-item"><span class="clickable-text" onclick="openNotes(${i})">Thema: ${topic.name} <small>(${noteCount})</small></span><button class="btn-delete" onclick="deleteTopic(${i})">X</button></li>`;
+            });
+        }
+
+        const oList = document.getElementById('todos-open-list'); oList.innerHTML = '';
+        const dList = document.getElementById('todos-done-list'); dList.innerHTML = '';
+        let oCount = 0, dCount = 0;
+
+        (memberData.todos || []).forEach((todo, i) => {
+            const html = `<li class="list-item ${todo.completed ? 'completed' : ''}"><div style="display:flex; gap:10px; align-items:center;"><input type="checkbox" class="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleTodo(${i})"><span>${todo.title}</span></div><button class="btn-delete" onclick="deleteTodo(${i})">X</button></li>`;
+            if(todo.completed) { dList.innerHTML += html; dCount++; } else { oList.innerHTML += html; oCount++; }
+        });
+        document.getElementById('counter-open').textContent = oCount;
+        document.getElementById('counter-done').textContent = dCount;
+    }
+
+    // Modals & Standard-Aktionen
+    function openSettingsModal() { document.getElementById('settings-modal').style.display='flex'; }
+    function closeSettingsModal() { document.getElementById('settings-modal').style.display='none'; }
+    function openNotes(i) { activeItemIndex = i; document.getElementById('modal-title').textContent = currentMember === 'Familie' ? familyData.Familie.events[i].name : familyData[currentMember].topics[i].name; document.getElementById('notes-modal').style.display = 'flex'; renderNotes(); }
+    function closeModal() { document.getElementById('notes-modal').style.display = 'none'; renderAll(); }
+    
+    function renderNotes() {
+        const list = document.getElementById('modal-notes-list'); list.innerHTML = '';
+        let notes = currentMember === 'Familie' ? familyData.Familie.events[activeItemIndex].notes || [] : familyData[currentMember].topics[activeItemIndex].notes || [];
+        if(notes.length === 0) { list.innerHTML = '<li>Keine Notizen</li>'; return; }
+        notes.forEach((note, ni) => { list.innerHTML += `<li style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>• ${note}</span><button class="btn-delete" onclick="deleteNote(${ni})">X</button></li>`; });
+    }
+
+    function addNote() { const input = document.getElementById('note-input'); if(input.value.trim()) { let item = currentMember === 'Familie' ? familyData.Familie.events[activeItemIndex] : familyData[currentMember].topics[activeItemIndex]; if(!item.notes) item.notes = []; item.notes.push(input.value.trim()); input.value=''; syncData(); renderNotes(); } }
+    function deleteNote(ni) { if(currentMember === 'Familie') { familyData.Familie.events[activeItemIndex].notes.splice(ni,1); } else { familyData[currentMember].topics[activeItemIndex].notes.splice(ni,1); } syncData(); renderNotes(); }
+    function addEvent() { const name = document.getElementById('event-input'); const start = document.getElementById('event-start'); const end = document.getElementById('event-end'); const color = document.getElementById('event-color'); if(name.value.trim() && start.value) { familyData.Familie.events.push({ name: name.value.trim(), start: start.value, end: end.value || start.value, color: color.value, notes: [] }); name.value=''; start.value=''; end.value=''; syncData(); } }
+    function deleteEvent(i) { if(confirm("Löschen?")) { familyData.Familie.events.splice(i,1); selectedDayIndex = null; syncData(); } }
+    function addTopic() { const input = document.getElementById('topic-input'); if(input.value.trim()) { familyData[currentMember].topics.push({name: input.value.trim(), notes: []}); input.value=''; syncData(); } }
+    function deleteTopic(i) { if(confirm("Löschen?")) { familyData[currentMember].topics.splice(i,1); syncData(); } }
+    function addTodo() { const input = document.getElementById('todo-input'); if(input.value.trim()) { if(!familyData[currentMember].todos) familyData[currentMember].todos = []; familyData[currentMember].todos.push({title: input.value.trim(), completed: false}); input.value=''; syncData(); } }
+    function toggleTodo(i) { familyData[currentMember].todos[i].completed = !familyData[currentMember].todos[i].completed; syncData(); }
+    function deleteTodo(i) { familyData[currentMember].todos.splice(i,1); syncData(); }
+</script>
+</body>
+</html>
