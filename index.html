@@ -58,15 +58,23 @@
         .sidebar.collapsed .sidebar-toggle { display: flex !important; right: -15px; }
         .main-view { flex: 1; overflow-y: auto; padding: 30px; }
         
-        /* --- CARDS & MINI-BUTTON LOGIK --- */
+        /* --- CARDS & MODIFIED HEADER LOGIC --- */
         .card { background: var(--card-bg); border-radius: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; margin-bottom: 20px; border-top: 5px solid var(--primary-color); height: 560px; }
-        .card-header { padding: 15px 20px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .card-body { padding: 20px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .btn-mini { border: none; background: rgba(0,0,0,0.05); cursor: pointer; padding: 6px; border-radius: 6px; font-size: 0.8rem; color: var(--text-color); }
+        
+        /* NEU: Symmetrischer Header für perfekte Ausrichtung */
+        .card-header { padding: 15px 20px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; position: relative; }
+        .card-header-left { flex: 1; font-weight: bold; text-align: left; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-header-center { flex: 0; position: absolute; left: 50%; transform: translateX(-50%); display: flex; justify-content: center; align-items: center; }
+        .card-header-right { flex: 1; text-align: right; pointer-events: none; visibility: hidden; } /* Unsichtbarer Ausgleichs-Klon für perfekte Zentrierung */
+
+        .btn-mini { border: none; background: rgba(0,0,0,0.05); cursor: pointer; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; color: var(--text-color); font-weight: bold; }
+        .btn-mini:hover { background: rgba(0,0,0,0.1); }
         
         /* Ganz kleine Schaltfläche für eingeklappte Karte */
-        .card-mini-trigger { width: 45px; height: 45px; border-radius: 50%; background: var(--primary-color); color: white; display: flex; justify-content: center; align-items: center; font-size: 1.4rem; font-weight: bold; cursor: pointer; box-shadow: var(--shadow); border: 2px solid var(--card-bg); margin-bottom: 15px; title: "Maximieren"; }
-        .card-mini-trigger:hover { transform: scale(1.1); }
+        .card-mini-container { display: flex; align-items: center; background: var(--card-bg); border-radius: 30px; padding: 5px 15px 5px 8px; box-shadow: var(--shadow); border: 2px solid var(--primary-color); margin-bottom: 15px; width: fit-content; gap: 10px; }
+        .card-mini-trigger { width: 35px; height: 35px; border-radius: 50%; background: var(--primary-color); color: white; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
+        .card-mini-text { font-size: 0.9rem; font-weight: bold; color: var(--text-color); }
+        .card-mini-container:hover { transform: scale(1.02); }
 
         /* --- INPUT GROUPS & LISTS --- */
         .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
@@ -84,10 +92,13 @@
         .cal-cell:hover { background: rgba(0,0,0,0.05); }
         .cal-cell.today { background: rgba(52, 152, 219, 0.15); border: 2px solid var(--primary-color); }
         .cal-num { font-weight: bold; font-size: 0.9rem; }
-        .cal-event { font-size: 0.75rem; padding: 2px 6px; color: white; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
+        .cal-event { font-size: 0.75rem; padding: 2px 6px; color: white; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; cursor: pointer; }
+        .cal-event:hover { filter: brightness(0.9); }
 
-        /* --- MODAL CONFIG --- */
+        /* --- MODAL CONFIG & GRADIENTS --- */
         .settings-modal { width: 90% !important; max-width: 750px !important; max-height: 85vh; overflow-y: auto; display: block !important; text-align: left; }
+        .beta-gradient-selection { background: linear-gradient(135deg, #ff7675, #6c5ce7) !important; color: white !important; font-weight: bold; }
+        
         .sidebar-toggle { position: absolute; top: 20px; right: -15px; background: var(--primary-color); color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 10; border: 2px solid var(--card-bg); font-weight: bold; }
         
         /* Wochenleiste Normalversion */
@@ -119,7 +130,7 @@
                     <p id="date">Datum laden...</p>
                 </div>
                 <div class="back" onclick="event.stopPropagation()">
-                    <h2>System Version 1.1</h2>
+                    <h2 id="system-version-title">System Version 1.1</h2>
                     <button class="btn-main active" style="margin-top:10px;" onclick="openSettings()">⚙️ Einstellungen</button>
                 </div>
             </div>
@@ -226,6 +237,7 @@
                     <option value="linear-gradient(135deg, #8e44ad, #3498db, #2ecc71)">Klassisch (Violett/Blau)</option>
                     <option value="linear-gradient(135deg, #f1c40f, #e67e22, #e74c3c)">Sunset (Orange/Rot)</option>
                     <option value="linear-gradient(135deg, #00cec9, #0984e3, #6c5ce7)">Ocean (Türkis/Blau)</option>
+                    <option value="beta-special" id="opt-beta-special" style="display:none;">Beta 1.12 Gradient (Red/Purple)</option>
                 </select>
             </div>
             <div style="background:rgba(0,0,0,0.03); padding:15px; border-radius:12px;">
@@ -348,23 +360,37 @@
             if(!s.show) return;
             const cardKey = s.id + activeMember;
             
-            // ULTRA-MINIMALER RUNDER TRIGER-BUTTON WENN GEKAPPT
+            // ULTRA-MINIMALER RUNDER TRIGGER-BUTTON WENN GEKAPPT MIT LINKER TEXT-ANZEIGE
             if(collapsedCards[cardKey]) {
+                const miniContainer = document.createElement('div');
+                miniContainer.className = "card-mini-container";
+                
+                const textLabel = document.createElement('span');
+                textLabel.className = "card-mini-text";
+                textLabel.textContent = s.title;
+
                 const miniTrigger = document.createElement('div');
                 miniTrigger.className = "card-mini-trigger";
                 miniTrigger.textContent = "+";
-                miniTrigger.title = `Ausklappen: ${s.title}`;
                 miniTrigger.onclick = () => toggleCardBody(s.id);
-                grid.appendChild(miniTrigger);
+                
+                miniContainer.appendChild(miniTrigger);
+                miniContainer.appendChild(textLabel);
+                grid.appendChild(miniContainer);
                 return;
             }
             
             const card = document.createElement('div');
             card.className = "card";
+            
+            // NEU: Vollständig ausbalancierter Header mit zentriertem Button
             let headerHtml = `
                 <div class="card-header">
-                    <span style="font-weight:bold">${s.title}</span>
-                    <button class="btn-mini" onclick="toggleCardBody('${s.id}')">➖ Zuklappen</button>
+                    <div class="card-header-left">${s.title} ist geöffnet</div>
+                    <div class="card-header-center">
+                        <button class="btn-mini" onclick="toggleCardBody('${s.id}')">➖ Zuklappen</button>
+                    </div>
+                    <div class="card-header-right">${s.title} ist geöffnet</div>
                 </div>`;
             let bodyHtml = `<div class="card-body">`;
             
@@ -457,11 +483,12 @@
         const cell = document.createElement('div');
         cell.className = `cal-cell ${isToday ? 'today' : ''}`;
         cell.innerHTML = `<div class="cal-num">${label}</div>`;
-        cell.onclick = () => openEventModal(dateStr);
+        cell.onclick = () => openQuickEventModal(dateStr);
         
         (familyData.Familie.events || []).forEach((e, idx) => {
             if(dateStr === e.start) {
-                cell.innerHTML += `<div class="cal-event" style="background:${e.color || '#3498db'};" onclick="event.stopPropagation(); openNotes(${idx});">${e.name}</div>`;
+                // NEU: onclick="deleteEventDirect(${idx})" ermoeglicht das Löschen beim Draufklicken
+                cell.innerHTML += `<div class="cal-event" style="background:${e.color || '#3498db'};" onclick="event.stopPropagation(); deleteEventDirect(${idx});">${e.name}</div>`;
             }
         });
         grid.appendChild(cell);
@@ -471,8 +498,10 @@
 
     // --- RENDERING LIST ITEMS & SYNCS ---
     function fillLists() {
-        const data = familyData[activeMember]; const leftList = document.getElementById('list-topics');
+        const data = familyData[activeMember]; 
+        const leftList = document.getElementById('list-topics');
         if(leftList) {
+            leftList.innerHTML = ""; // Behebt das Duplizierungsrisiko
             if(activeMember === 'Familie') {
                 updateNormalWeekBar();
                 (data.events || []).forEach((e, i) => { leftList.innerHTML += `<li class="list-item"><span class="clickable-text" onclick="openNotes(${i})"><strong>${e.name}</strong> <small>(${new Date(e.start).toLocaleDateString('de-DE')})</small></span><button class="btn-delete" onclick="deleteEvent(${i})">X</button></li>`; });
@@ -480,76 +509,205 @@
                 (data.topics || []).forEach((t, i) => { leftList.innerHTML += `<li class="list-item"><span class="clickable-text" onclick="openNotes(${i})">${t.name} <small>(${t.notes?t.notes.length:0} Infos)</small></span><button class="btn-delete" onclick="deleteTopic(${i})">X</button></li>`; });
             }
         }
-        const oList = document.getElementById('list-todo-open'); const dList = document.getElementById('list-todo-done');
-        if(oList && dList) {
-            (data.todos || []).forEach((todo, i) => {
-                const html = `<li class="list-item"><span style="display:flex; gap:10px; align-items:center;"><input type="checkbox" ${todo.completed?'checked':''} onchange="toggleTodo(${i})"><span>${todo.title}</span></span><button class="btn-delete" onclick="deleteTodo(${i})">X</button></li>`;
-                if(todo.completed) dList.innerHTML += html; else oList.innerHTML += html;
-            });
+        
+        const oList = document.getElementById('list-todo-open'); 
+        const dList = document.getElementById('list-todo-done');
+        if(oList) oList.innerHTML = "";
+        if(dList) dList.innerHTML = "";
+        
+        (data.todos || []).forEach((todo, i) => {
+            if(!todo.done && oList) {
+                oList.innerHTML += `<li class="list-item"><span>${todo.name}</span><div><button class="btn-mini" onclick="toggleTodo(${i})">✓</button><button class="btn-delete" onclick="deleteTodo(${i})">X</button></div></li>`;
+            } else if(todo.done && dList) {
+                dList.innerHTML += `<li class="list-item" style="opacity:0.5; text-decoration:line-through;"><span>${todo.name}</span><div><button class="btn-mini" onclick="toggleTodo(${i})">↩</button><button class="btn-delete" onclick="deleteTodo(${i})">X</button></div></li>`;
+            }
+        });
+    }
+
+    // --- EVENT / DATA MANIPULATION FUNCTIONS ---
+    function addEvent() {
+        const name = document.getElementById('event-input').value;
+        const start = document.getElementById('event-start').value;
+        const color = document.getElementById('event-color-normal').value;
+        if(!name || !start) return;
+        if(!familyData.Familie.events) familyData.Familie.events = [];
+        familyData.Familie.events.push({ name, start, color, notes: [] });
+        document.getElementById('event-input').value = "";
+        syncData();
+    }
+
+    // NEU: Funktion zum direkten Löschen eines Termins beim Klick auf das Kalenderelement
+    function deleteEventDirect(idx) {
+        const e = familyData.Familie.events[idx];
+        if(confirm(`Möchtest du den Termin "${e.name}" wirklich direkt löschen?`)) {
+            deleteEvent(idx);
         }
     }
 
-    function openEventModal(dateStr) { document.getElementById('quick-event-date').value = dateStr; document.getElementById('quick-event-name').value = ""; document.getElementById('event-modal').style.display = 'flex'; }
+    function deleteEvent(idx) {
+        familyData.Familie.events.splice(idx, 1);
+        syncData();
+    }
+
+    function addTopic() {
+        const input = document.getElementById('topic-input'); if(!input || !input.value) return;
+        familyData[activeMember].topics.push({ name: input.value, notes: [] });
+        input.value = ""; syncData();
+    }
+    function deleteTopic(i) { familyData[activeMember].topics.splice(i, 1); syncData(); }
+
+    function addTodo() {
+        const input = document.getElementById('todo-input'); if(!input || !input.value) return;
+        familyData[activeMember].todos.push({ name: input.value, done: false });
+        input.value = ""; syncData();
+    }
+    function toggleTodo(i) { familyData[activeMember].todos[i].done = !familyData[activeMember].todos[i].done; syncData(); }
+    function deleteTodo(i) { familyData[activeMember].todos.splice(i, 1); syncData(); }
+
+    // --- QUICK WINDOW & NAVIGATION ---
+    function openQuickEventModal(dateStr) {
+        document.getElementById('quick-event-date').value = dateStr;
+        document.getElementById('quick-event-name').value = "";
+        document.getElementById('event-modal').style.display = 'flex';
+    }
     function closeEventModal() { document.getElementById('event-modal').style.display = 'none'; }
     function saveQuickEvent() {
-        const name = document.getElementById('quick-event-name').value; const date = document.getElementById('quick-event-date').value; const color = document.getElementById('quick-event-color').value;
-        if(name.trim() && date) { familyData.Familie.events.push({ name: name.trim(), start: date, end: date, color: color, notes: [] }); syncData(); closeEventModal(); }
+        const name = document.getElementById('quick-event-name').value;
+        const start = document.getElementById('quick-event-date').value;
+        const color = document.getElementById('quick-event-color').value;
+        if(!name || !start) return;
+        if(!familyData.Familie.events) familyData.Familie.events = [];
+        familyData.Familie.events.push({ name, start, color, notes: [] });
+        closeEventModal(); syncData();
     }
 
     function changeMonth(dir) { monthOffset += dir; renderAll(); }
     function jumpToToday() { monthOffset = 0; renderAll(); }
 
     function updateNormalWeekBar() {
-        const now = new Date(); const currentDay = now.getDay(); const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay; const monday = new Date(now); monday.setDate(now.getDate() + distanceToMonday + (weekOffset * 7));
-        currentWeekDates = []; for(let i = 0; i < 7; i++) { let d = new Date(monday); d.setDate(monday.getDate() + i); currentWeekDates.push({ dayNum: d.getDate(), fullDateStr: d.toISOString().split('T')[0] }); }
-        for(let i = 0; i < 7; i++) {
-            const el = document.getElementById(`wd-${i}`); if(!el) continue; el.textContent = currentWeekDates[i].dayNum; el.className = 'day-number' + (selectedDayIndex === i ? ' selected-day' : ''); el.style.backgroundColor = ''; el.style.color = '';
-            (familyData.Familie.events || []).forEach(e => { if(currentWeekDates[i].fullDateStr === e.start) { el.style.backgroundColor = e.color || '#e67e22'; el.style.color = 'white'; } });
+        const now = new Date();
+        const currentDay = now.getDay();
+        const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+        const monday = new Date(now); monday.setDate(now.getDate() + distanceToMonday + (weekOffset * 7));
+        currentWeekDates = [];
+        for(let i=0; i<7; i++) {
+            let d = new Date(monday); d.setDate(monday.getDate() + i);
+            currentWeekDates.push(d.toISOString().split('T')[0]);
+            const numEl = document.getElementById(`wd-${i}`);
+            if(numEl) {
+                numEl.textContent = d.getDate();
+                numEl.classList.toggle('selected-day', i === selectedDayIndex);
+            }
         }
     }
+    function changeWeek(dir) { weekOffset += dir; selectedDayIndex = null; document.getElementById('day-preview-container').style.display='none'; renderAll(); }
+    function selectDay(idx) {
+        selectedDayIndex = idx;
+        updateNormalWeekBar();
+        const targetDate = currentWeekDates[idx];
+        const dayEvents = (familyData.Familie.events || []).filter(e => e.start === targetDate);
+        const box = document.getElementById('day-preview-container');
+        const text = document.getElementById('day-preview-text');
+        box.style.display = 'block';
+        if(dayEvents.length > 0) {
+            text.innerHTML = dayEvents.map(e => `<span style="color:${e.color}; font-weight:bold;">•</span> ${e.name}`).join('<br>');
+        } else { text.textContent = "Keine Termine"; }
+    }
 
-    function selectDay(index) {
-        const container = document.getElementById('day-preview-container');
-        if (selectedDayIndex === index) { selectedDayIndex = null; container.style.display = 'none'; } 
-        else {
-            selectedDayIndex = index; const target = currentWeekDates[index].fullDateStr; const active = (familyData.Familie.events || []).filter(e => target === e.start); container.style.display = 'block';
-            document.getElementById('day-preview-text').innerHTML = active.length === 0 ? `<em>Keine Termine</em>` : active.map(e => `• <strong>${e.name}</strong>`).join('<br>');
+    // --- MODALS & EXTENDED SYSTEMS ---
+    function openNotes(idx) {
+        activeItemIndex = idx;
+        const modal = document.getElementById('notes-modal');
+        const title = document.getElementById('modal-title');
+        const list = document.getElementById('modal-notes-list');
+        list.innerHTML = "";
+        modal.style.display = 'flex';
+        
+        if(activeMember === 'Familie') {
+            const e = familyData.Familie.events[idx];
+            title.textContent = e.name;
+            if(!e.notes) e.notes = [];
+            e.notes.forEach((n, i) => { list.innerHTML += `<li>${n} <button class="btn-delete" onclick="deleteNote(${i})">X</button></li>`; });
+        } else {
+            const t = familyData[activeMember].topics[idx];
+            title.textContent = t.name;
+            if(!t.notes) t.notes = [];
+            t.notes.forEach((n, i) => { list.innerHTML += `<li>${n} <button class="btn-delete" onclick="deleteNote(${i})">X</button></li>`; });
+        }
+    }
+    function closeModal() { document.getElementById('notes-modal').style.display = 'none'; }
+    function addNote() {
+        const input = document.getElementById('note-input'); if(!input || !input.value) return;
+        if(activeMember === 'Familie') {
+            if(!familyData.Familie.events[activeItemIndex].notes) familyData.Familie.events[activeItemIndex].notes = [];
+            familyData.Familie.events[activeItemIndex].notes.push(input.value);
+        } else {
+            if(!familyData[activeMember].topics[activeItemIndex].notes) familyData[activeMember].topics[activeItemIndex].notes = [];
+            familyData[activeMember].topics[activeItemIndex].notes.push(input.value);
+        }
+        input.value = ""; syncData(); openNotes(activeItemIndex);
+    }
+    function deleteNote(i) {
+        if(activeMember === 'Familie') { familyData.Familie.events[activeItemIndex].notes.splice(i,1); }
+        else { familyData[activeMember].topics[activeItemIndex].notes.splice(i,1); }
+        syncData(); openNotes(activeItemIndex);
+    }
+
+    // --- CONFIG SYSTEM ---
+    function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; }
+    function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; }
+    
+    function applyView() {
+        const val = document.getElementById('set-view').value;
+        config.view = val;
+        document.getElementById('view-normal').style.display = val === 'normal' ? 'block' : 'none';
+        document.getElementById('view-beta').style.display = val === 'beta' ? 'flex' : 'none';
+        
+        // NEU: Schaltet die Gradientenoptionen und Titel fuer Version 1.12 frei
+        const optBeta = document.getElementById('opt-beta-special');
+        if(val === 'beta') {
+            optBeta.style.display = 'block';
+            document.getElementById('system-version-title').textContent = "System Version 1.12 (Beta Layout)";
+        } else {
+            optBeta.style.display = 'none';
+            document.getElementById('system-version-title').textContent = "System Version 1.1";
+            if(document.getElementById('set-color').value === 'beta-special') {
+                document.getElementById('set-color').value = 'linear-gradient(135deg, #8e44ad, #3498db, #2ecc71)';
+            }
         }
         renderAll();
     }
 
-    function flipHeader() { const flip = document.getElementById('header-flip'); flip.classList.add('flipped'); if(flipTimer) clearTimeout(flipTimer); flipTimer = setTimeout(() => flip.classList.remove('flipped'), 5000); }
-    function openSettings() { document.getElementById('settings-modal').style.display='flex'; }
-    function closeSettings() { document.getElementById('settings-modal').style.display='none'; }
-    function toggleDarkMode() { config.darkMode = !config.darkMode; document.getElementById('app-body').classList.toggle('dark-mode', config.darkMode); }
     function applyGradient() {
-        const grad = document.getElementById('set-color').value; config.gradient = grad; document.getElementById('app-body').style.setProperty('--header-gradient', grad);
-        const extractedColor = grad.includes('f1c40f') ? '#e67e22' : (grad.includes('00cec9') ? '#0984e3' : '#8e44ad');
-        document.getElementById('app-body').style.setProperty('--primary-color', extractedColor); renderAll();
+        let val = document.getElementById('set-color').value;
+        // NEU: Aktiviert den speziellen Farbverlauf fuer Version 1.12
+        if(val === 'beta-special') {
+            val = 'linear-gradient(135deg, #ff7675, #6c5ce7)';
+        }
+        config.gradient = val;
+        document.documentElement.style.setProperty('--header-gradient', val);
     }
-    function applyView() { config.view = document.getElementById('set-view').value; document.getElementById('view-normal').style.display = config.view === 'normal' ? 'block' : 'none'; document.getElementById('view-beta').style.display = config.view === 'beta' ? 'flex' : 'none'; switchMember(activeMember); }
+
+    function toggleDarkMode() {
+        config.darkMode = !config.darkMode;
+        document.body.classList.toggle('dark-mode', config.darkMode);
+    }
+
     function updatePin() {
-        const oldP = document.getElementById('pin-old').value; const n1 = document.getElementById('pin-new1').value; const n2 = document.getElementById('pin-new2').value;
-        if(oldP === GEHEIMER_PIN && n1 === n2 && n1.length === 4) { GEHEIMER_PIN = n1; database.ref('familyZentrumConfig/pin').set(n1); alert("PIN geändert!"); closeSettings(); } else { alert("Fehler!"); }
+        const oldP = document.getElementById('pin-old').value;
+        const n1 = document.getElementById('pin-new1').value;
+        const n2 = document.getElementById('pin-new2').value;
+        if(oldP !== GEHEIMER_PIN) { alert("Alter PIN falsch!"); return; }
+        if(n1 !== n2 || n1.length !== 4) { alert("Neue PINs stimmen nicht überein oder sind nicht 4-stellig!"); return; }
+        database.ref('familyZentrumConfig/pin').set(n1).then(() => {
+            alert("PIN erfolgreich geändert!");
+            document.getElementById('pin-old').value = "";
+            document.getElementById('pin-new1').value = "";
+            document.getElementById('pin-new2').value = "";
+        });
     }
-    function openNotes(i) { activeItemIndex = i; document.getElementById('modal-title').textContent = activeMember === 'Familie' ? familyData.Familie.events[i].name : familyData[activeMember].topics[i].name; document.getElementById('notes-modal').style.display = 'flex'; renderNotes(); }
-    function closeModal() { document.getElementById('notes-modal').style.display = 'none'; renderAll(); }
-    function renderNotes() { const list = document.getElementById('modal-notes-list'); list.innerHTML = ''; let notes = activeMember === 'Familie' ? familyData.Familie.events[activeItemIndex].notes || [] : familyData[activeMember].topics[activeItemIndex].notes || []; if(notes.length === 0) { list.innerHTML = '<li>Keine Notizen</li>'; return; } notes.forEach((n, ni) => { list.innerHTML += `<li style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>• ${n}</span><button class="btn-delete" onclick="deleteNote(${ni})">X</button></li>`; }); }
-    function addNote() { const input = document.getElementById('note-input'); if(input.value.trim()) { let item = activeMember === 'Familie' ? familyData.Familie.events[activeItemIndex] : familyData[activeMember].topics[activeItemIndex]; if(!item.notes) item.notes = []; item.notes.push(input.value.trim()); input.value=''; syncData(); renderNotes(); } }
-    function deleteNote(ni) { if(activeMember === 'Familie') { familyData.Familie.events[activeItemIndex].notes.splice(ni,1); } else { familyData[activeMember].topics[activeItemIndex].notes.splice(ni,1); } syncData(); renderNotes(); }
-    
-    function addEvent() { 
-        const name = document.getElementById('event-input'); const start = document.getElementById('event-start');
-        const color = document.getElementById('event-color-normal').value;
-        if(name.value.trim() && start.value) { familyData.Familie.events.push({ name: name.value.trim(), start: start.value, end: start.value, color: color, notes: [] }); name.value=''; start.value=''; syncData(); } 
-    }
-    function deleteEvent(i) { if(confirm("Termin löschen?")) { familyData.Familie.events.splice(i,1); selectedDayIndex = null; syncData(); } }
-    function addTopic() { const input = document.getElementById('topic-input'); if(input.value.trim()) { familyData[activeMember].topics.push({name: input.value.trim(), notes: []}); input.value=''; syncData(); } }
-    function deleteTopic(i) { if(confirm("Thema löschen?")) { familyData[activeMember].topics.splice(i,1); syncData(); } }
-    function addTodo() { const input = document.getElementById('todo-input'); if(input.value.trim()) { if(!familyData[activeMember].todos) familyData[activeMember].todos = []; familyData[activeMember].todos.push({title: input.value.trim(), completed: false}); input.value=''; syncData(); } }
-    function toggleTodo(i) { familyData[activeMember].todos[i].completed = !familyData[activeMember].todos[i].completed; syncData(); }
-    function deleteTodo(i) { familyData[activeMember].todos.splice(i,1); syncData(); }
-    function changeWeek(dir) { weekOffset += dir; renderAll(); }
+
+    function flipHeader() { document.getElementById('header-flip').classList.toggle('flipped'); }
 </script>
 </body>
 </html>
