@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Familien-Zentrum v1.15</title>
+    <title>Familien-Zentrum v1.16</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
@@ -25,7 +25,7 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; transition: background 0.2s, color 0.2s, width 0.3s; }
-        body { background-color: var(--bg-color); color: var(--text-color); min-height: 100vh; }
+        body { background-color: var(--bg-color); color: var(--text-color); min-height: 100vh; overflow-x: hidden; }
 
         /* --- LOGIN & OVERLAYS --- */
         .login-overlay { position: fixed; inset: 0; background: var(--bg-color); display: flex; justify-content: center; align-items: center; z-index: 5000; }
@@ -50,21 +50,27 @@
         .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
         .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; width: 100%; position: relative; }
 
-        /* Beta Sidebar Layout */
-        .beta-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
-        .sidebar { width: 280px; background: var(--card-bg); border-right: 1px solid rgba(0,0,0,0.1); display: flex; flex-direction: column; padding: 20px; position: relative; box-shadow: var(--shadow); }
-        .sidebar.collapsed { width: 40px; padding: 20px 0; }
-        .sidebar.collapsed * { display: none !important; }
-        .sidebar.collapsed .sidebar-toggle { display: flex !important; right: -15px; }
-        .main-view { flex: 1; overflow-y: auto; padding: 30px; }
+        /* Beta Sidebar Layout mit Fehlerkorrektur für Text-Überlauf */
+        .beta-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; position: relative; }
+        .sidebar { width: 280px; background: var(--card-bg); border-right: 1px solid rgba(0,0,0,0.1); display: flex; flex-direction: column; padding: 20px; position: relative; box-shadow: var(--shadow); flex-shrink: 0; overflow-x: hidden; }
+        .sidebar.collapsed { width: 0px; padding: 20px 0; border: none; }
+        .sidebar .sidebar-content { display: flex; flex-direction: column; height: 100%; width: 240px; }
+        .sidebar.collapsed .sidebar-content { display: none; }
+        .main-view { flex: 1; overflow-y: auto; padding: 30px; width: 100%; }
         
+        /* Handy-Anpassung Beta Sidebar */
+        @media (max-width: 768px) {
+            .sidebar { position: absolute; left: 0; top: 0; bottom: 0; z-index: 100; }
+            .sidebar.collapsed { width: 0px; }
+            .main-view { padding: 15px; }
+        }
+
         /* --- CARDS & MINI-BUTTON LOGIK --- */
         .card { background: var(--card-bg); border-radius: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; margin-bottom: 20px; border-top: 5px solid var(--primary-color); height: 560px; }
         .card-header { padding: 15px 20px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .card-body { padding: 20px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
         .btn-mini { border: none; background: rgba(0,0,0,0.05); cursor: pointer; padding: 6px; border-radius: 6px; font-size: 0.8rem; color: var(--text-color); }
         
-        /* Neuer, mittig platzierter Trigger-Button mit Text */
         .card-mini-trigger { background: var(--primary-color); color: white; display: flex; justify-content: center; align-items: center; gap: 10px; padding: 12px 24px; border-radius: 30px; font-size: 1rem; font-weight: bold; cursor: pointer; box-shadow: var(--shadow); border: 2px solid var(--card-bg); margin-bottom: 15px; width: max-content; }
         .card-mini-trigger:hover { transform: scale(1.03); }
 
@@ -77,7 +83,7 @@
         .clickable-text { cursor: pointer; flex: 1; }
         .btn-delete { background: none; border: none; color: #e74c3c; cursor: pointer; padding: 2px 6px; font-weight: bold; }
 
-        /* --- BIG CALENDAR --- */
+        /* --- BIG CALENDAR (PC-Gitter) --- */
         .big-calendar { background: var(--card-bg); border-radius: 24px; padding: 20px; box-shadow: var(--shadow); width: 100%; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 15px; }
         .cal-cell { background: rgba(0,0,0,0.02); min-height: 95px; padding: 8px; cursor: pointer; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 4px; }
@@ -86,11 +92,26 @@
         .cal-num { font-weight: bold; font-size: 0.9rem; }
         .cal-event { font-size: 0.75rem; padding: 2px 6px; color: white; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
 
+        /* --- MOBILE CALENDAR LIST VIEW (Für Handys) --- */
+        .mobile-cal-list { display: none; flex-direction: column; gap: 10px; margin-top: 15px; max-height: 500px; overflow-y: auto; }
+        .mobile-cal-row { background: rgba(0,0,0,0.02); padding: 12px; border-radius: 12px; display: flex; flex-direction: column; gap: 6px; border-left: 5px solid transparent; cursor: pointer; }
+        .mobile-cal-row.today { background: rgba(52, 152, 219, 0.1); border-left-color: var(--primary-color); }
+        .mobile-cal-date-label { font-weight: bold; font-size: 0.95rem; display: flex; justify-content: space-between; }
+        .mobile-cal-events-container { display: flex; flex-direction: column; gap: 4px; }
+        .mobile-cal-pill { padding: 6px 10px; color: white; border-radius: 6px; font-size: 0.85rem; font-weight: bold; }
+
+        /* Media Query zur Umschaltung des Kalenders auf Handys */
+        @media (max-width: 768px) {
+            .cal-grid { display: none !important; }
+            .mobile-cal-list { display: flex !important; }
+            .calendar-week-view { font-size: 0.75rem; gap: 2px !important; }
+            .day-number { width: 22px !important; height: 22px !important; font-size: 0.75rem !important; }
+        }
+
         /* --- MODAL CONFIG --- */
         .settings-modal { width: 90% !important; max-width: 750px !important; max-height: 85vh; overflow-y: auto; display: block !important; text-align: left; }
-        .sidebar-toggle { position: absolute; top: 20px; right: -15px; background: var(--primary-color); color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 10; border: 2px solid var(--card-bg); font-weight: bold; }
+        .sidebar-toggle { position: absolute; top: 20px; right: 5px; background: var(--primary-color); color: white; border-radius: 50%; width: 35px; height: 35px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 110; border: 2px solid var(--card-bg); font-weight: bold; box-shadow: var(--shadow); }
         
-        /* Wochenleiste Normalversion */
         .week-navigation-container { background-color: rgba(0,0,0,0.03); border-radius: 8px; padding: 10px; margin-bottom: 15px; }
         .calendar-week-view { display: grid; grid-template-columns: auto repeat(7, 1fr) auto; gap: 5px; text-align: center; align-items: center; }
         .day-number { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; margin: auto; font-size: 0.85rem; }
@@ -135,21 +156,23 @@
                 <button class="btn-main" onclick="toggleExpandCalendarNormal()">Collapse ↩</button>
             </div>
             <div class="cal-grid" id="cal-grid-body-normal"></div>
-        </div>
+            <div class="mobile-cal-list" id="cal-list-body-normal"></div> </div>
 
         <div id="dashboard-normal" class="dashboard-grid"></div>
     </div>
 
     <div id="view-beta" class="beta-layout" style="display:none">
+        <div class="sidebar-toggle" id="side-arrow" onclick="toggleSidebar()">◀</div>
         <div class="sidebar" id="app-sidebar">
-            <div class="sidebar-toggle" id="side-arrow" onclick="toggleSidebar()">◀</div>
-            <h2>Menu</h2>
-            <hr style="margin:15px 0; opacity:0.2;">
-            <div id="person-nav-beta" style="display:flex; flex-direction:column; gap:10px;"></div>
-            <hr style="margin:15px 0; opacity:0.2;">
-            <button class="btn-main" onclick="toggleDarkMode()">🌓 Dark Mode</button>
-            <button class="btn-main" style="margin-top:10px;" onclick="openSettings()">⚙️ Einstellungen</button>
-            <div id="beta-clock-small" style="margin-top:auto; text-align:center; font-weight:bold; font-size:1.2rem;">00:00</div>
+            <div class="sidebar-content">
+                <h2>Menu</h2>
+                <hr style="margin:15px 0; opacity:0.2;">
+                <div id="person-nav-beta" style="display:flex; flex-direction:column; gap:10px;"></div>
+                <hr style="margin:15px 0; opacity:0.2;">
+                <button class="btn-main" onclick="toggleDarkMode()">🌓 Dark Mode</button>
+                <button class="btn-main" style="margin-top:10px;" onclick="openSettings()">⚙️ Einstellungen</button>
+                <div id="beta-clock-small" style="margin-top:auto; text-align:center; font-weight:bold; font-size:1.2rem;">00:00</div>
+            </div>
         </div>
         
         <div class="main-view">
@@ -185,7 +208,7 @@
                     </div>
                 </div>
                 <div class="cal-grid" id="cal-grid-body"></div>
-            </div>
+                <div class="mobile-cal-list" id="cal-list-body"></div> </div>
 
             <div id="dashboard-beta" class="dashboard-grid"></div>
         </div>
@@ -281,7 +304,7 @@
     let currentWeekDates = [];
     let selectedDayIndex = null;
     let activeItemIndex = null;
-    let isCalEventModalActive = false; // Checkt ob wir ein Event oder Lernthema offen haben
+    let isCalEventModalActive = false;
     let flipTimer = null;
 
     const firebaseConfig = {
@@ -332,7 +355,20 @@
     }
 
     function syncData() { database.ref('familyZentrumData').set(familyData); }
-    function toggleSidebar() { const side = document.getElementById('app-sidebar'); side.classList.toggle('collapsed'); document.getElementById('side-arrow').textContent = side.classList.contains('collapsed') ? "▶" : "◀"; }
+    
+    function toggleSidebar() { 
+        const side = document.getElementById('app-sidebar'); 
+        const arrow = document.getElementById('side-arrow');
+        side.classList.toggle('collapsed'); 
+        if(side.classList.contains('collapsed')) {
+            arrow.textContent = "▶";
+            arrow.style.left = "5px";
+        } else {
+            arrow.textContent = "◀";
+            arrow.style.left = "245px";
+        }
+    }
+
     function switchMember(name) { activeMember = name; selectedDayIndex = null; renderNavButtons(); renderAll(); }
 
     function renderNavButtons() {
@@ -345,7 +381,6 @@
         });
     }
 
-    // --- MAIN RENDER PIPELINE ---
     function renderAll() {
         renderNavButtons();
         const isBeta = config.view === 'beta';
@@ -353,12 +388,11 @@
         document.getElementById('dashboard-normal').innerHTML = "";
         document.getElementById('dashboard-beta').innerHTML = "";
         
-        // Kalender umschalten
         const bigCalBeta = document.getElementById('family-calendar-beta');
-        if(activeMember === 'Familie' && isBeta) { bigCalBeta.style.display = 'block'; renderBigCalendar('cal-grid-body', 'cal-month-name', betaCalScope); } else { bigCalBeta.style.display = 'none'; }
+        if(activeMember === 'Familie' && isBeta) { bigCalBeta.style.display = 'block'; renderBigCalendar('cal-grid-body', 'cal-list-body', 'cal-month-name', betaCalScope); } else { bigCalBeta.style.display = 'none'; }
         
         const bigCalNormal = document.getElementById('expanded-calendar-normal');
-        if(activeMember === 'Familie' && !isBeta && showExpandedNormalCal) { bigCalNormal.style.display = 'block'; renderBigCalendar('cal-grid-body-normal', 'cal-month-name-normal', 'month'); } else { bigCalNormal.style.display = 'none'; }
+        if(activeMember === 'Familie' && !isBeta && showExpandedNormalCal) { bigCalNormal.style.display = 'block'; renderBigCalendar('cal-grid-body-normal', 'cal-list-body-normal', 'cal-month-name-normal', 'month'); } else { bigCalNormal.style.display = 'none'; }
 
         const structures = [
             { id: 'topics', title: activeMember === 'Familie' ? 'Kalender Termine' : 'Lernthemen', show: activeMember !== 'Anna' && activeMember !== 'Robert' },
@@ -370,7 +404,6 @@
             if(!s.show) return;
             const cardKey = s.id + activeMember;
             
-            // OPTIMIERTER MINI BUTTON (TEXT + MITTIG) WENN ZUGEKLAPPT
             if(collapsedCards[cardKey]) {
                 const miniTrigger = document.createElement('div');
                 miniTrigger.className = "card-mini-trigger";
@@ -437,60 +470,91 @@
         betaCalScope = scope;
         document.getElementById('btn-view-month').classList.toggle('active', scope === 'month');
         document.getElementById('btn-view-week').classList.toggle('active', scope === 'week');
-        renderBigCalendar('cal-grid-body', 'cal-month-name', scope);
+        renderBigCalendar('cal-grid-body', 'cal-list-body', 'cal-month-name', scope);
     }
 
-    // --- KALENDER SYSTEM ---
-    function renderBigCalendar(targetGridId, targetTitleId, scope) {
-        const grid = document.getElementById(targetGridId); grid.innerHTML = "";
+    // --- FLEXIBLES RESPONSIVES KALENDER SYSTEM ---
+    function renderBigCalendar(gridId, listId, titleId, scope) {
+        const grid = document.getElementById(gridId); 
+        const list = document.getElementById(listId);
+        grid.innerHTML = ""; 
+        list.innerHTML = "";
         const now = new Date();
         
         if (scope === "month") {
             const firstDay = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
             const lastDay = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0);
-            document.getElementById(targetTitleId).textContent = firstDay.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+            document.getElementById(titleId).textContent = firstDay.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
             
             let startShift = (firstDay.getDay() + 6) % 7;
             for(let i=0; i<startShift; i++) grid.innerHTML += `<div class="cal-cell" style="opacity:0.2;"></div>`;
 
             for(let d=1; d<=lastDay.getDate(); d++) {
                 const cellDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, d);
-                buildCalCell(grid, cellDate, d, now);
+                buildCalCell(grid, list, cellDate, d, now);
             }
         } else if (scope === "week") {
             const currentDay = now.getDay();
             const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
             const monday = new Date(now); monday.setDate(now.getDate() + distanceToMonday + (monthOffset * 7));
             const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
-            document.getElementById(targetTitleId).textContent = `KW ${getWeekNumber(monday)} (${monday.getDate()}.${monday.getMonth()+1}. - ${sunday.getDate()}.${sunday.getMonth()+1}.)`;
+            document.getElementById(titleId).textContent = `KW ${getWeekNumber(monday)} (${monday.getDate()}.${monday.getMonth()+1}. - ${sunday.getDate()}.${sunday.getMonth()+1}.)`;
 
             for(let i=0; i<7; i++) {
                 let cellDate = new Date(monday); cellDate.setDate(monday.getDate() + i);
                 const dayLabel = cellDate.toLocaleDateString('de-DE', {weekday: 'short'});
-                buildCalCell(grid, cellDate, `${dayLabel} ${cellDate.getDate()}`, now);
+                buildCalCell(grid, list, cellDate, `${dayLabel} ${cellDate.getDate()}`, now);
             }
         }
     }
 
-    function buildCalCell(grid, cellDate, label, now) {
+    function buildCalCell(grid, list, cellDate, label, now) {
         const dateStr = cellDate.toISOString().split('T')[0];
         const isToday = cellDate.toDateString() === now.toDateString();
+        
+        // 1. PC Version (Grid-Zelle)
         const cell = document.createElement('div');
         cell.className = `cal-cell ${isToday ? 'today' : ''}`;
         cell.innerHTML = `<div class="cal-num">${label}</div>`;
         cell.onclick = () => openEventModal(dateStr);
         
+        // 2. Handy Version (Listen-Zeile)
+        const row = document.createElement('div');
+        row.className = `mobile-cal-row ${isToday ? 'today' : ''}`;
+        row.innerHTML = `<div class="mobile-cal-date-label"><span>${cellDate.toLocaleDateString('de-DE', {weekday: 'short', day: 'numeric', month: 'numeric'})}</span></div>`;
+        row.onclick = () => openEventModal(dateStr);
+        const mobileEventsContainer = document.createElement('div');
+        mobileEventsContainer.className = "mobile-cal-events-container";
+
+        let dayHasEvents = false;
+
         (familyData.Familie.events || []).forEach((e, idx) => {
             if(dateStr === e.start) {
+                dayHasEvents = true;
+                // Event in PC Grid spritzen
                 cell.innerHTML += `<div class="cal-event" style="background:${e.color || '#3498db'};" onclick="event.stopPropagation(); openNotes(${idx}, true);">${e.name}</div>`;
+                
+                // Event in Handy Liste spritzen
+                const pill = document.createElement('div');
+                pill.className = "mobile-cal-pill";
+                pill.style.backgroundColor = e.color || '#3498db';
+                pill.textContent = e.name;
+                pill.onclick = (event) => { event.stopPropagation(); openNotes(idx, true); };
+                mobileEventsContainer.appendChild(pill);
             }
         });
+        
         grid.appendChild(cell);
+        
+        // Nur Tage mit Terminen anzeigen oder "Heute", um die Handy-Liste sauber zu halten
+        if(dayHasEvents || isToday) {
+            row.appendChild(mobileEventsContainer);
+            list.appendChild(row);
+        }
     }
 
     function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var s = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil((((d - s) / 86400000) + 1)/7); }
 
-    // --- LISTEN BEFÜLLEN ---
     function fillLists() {
         const data = familyData[activeMember]; const leftList = document.getElementById('list-topics');
         if(leftList) {
@@ -556,7 +620,6 @@
         if(oldP === GEHEIMER_PIN && n1 === n2 && n1.length === 4) { GEHEIMER_PIN = n1; database.ref('familyZentrumConfig/pin').set(n1); alert("PIN geändert!"); closeSettings(); } else { alert("Fehler!"); }
     }
 
-    // --- GEÄNDERTES NOTES / DETAILS MODAL (DIREKT-LÖSCH-SUPPORT) ---
     function openNotes(i, isCalEvent) { 
         activeItemIndex = i; 
         isCalEventModalActive = isCalEvent;
@@ -564,10 +627,10 @@
         
         if(isCalEvent) {
             document.getElementById('modal-title').textContent = familyData.Familie.events[i].name;
-            delBtn.style.display = "block"; // Zeige Löschen-Button für Kalender-Termine
+            delBtn.style.display = "block";
         } else {
             document.getElementById('modal-title').textContent = familyData[activeMember].topics[i].name;
-            delBtn.style.display = "block"; // Erlaubt auch schnelles Löschen für Lernthemen!
+            delBtn.style.display = "block";
         }
         document.getElementById('notes-modal').style.display = 'flex'; 
         renderNotes(); 
@@ -575,7 +638,6 @@
     
     function closeModal() { document.getElementById('notes-modal').style.display = 'none'; renderAll(); }
     
-    // Die neue Funktion für das direkte Löschen aus dem Kalender-Popup heraus
     function deleteActiveItemDirectly() {
         if(confirm("Möchtest du das wirklich sofort löschen?")) {
             if(isCalEventModalActive) {
